@@ -1,0 +1,17 @@
+{
+  "Navigation": {
+    "home": "Home",
+    "tickets": "Tickets",
+    "momo": "MoMo",
+    "schedules": "Schedules",
+    "account": "Account"
+  },
+  "Search": {
+    "title": "Book your best trip",
+    "from": "From",
+    "to": "To",
+    "date": "Departure Date",
+    "passengers": "Passengers",
+    "searchButton": "Search"
+  }
+}

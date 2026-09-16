@@ -1,0 +1,17 @@
+{
+  "Navigation": {
+    "home": "Accueil",
+    "tickets": "Billets",
+    "momo": "MoMo",
+    "schedules": "Horaires",
+    "account": "Compte"
+  },
+  "Search": {
+    "title": "Réservez votre meilleur voyage",
+    "from": "Départ",
+    "to": "Arrivée",
+    "date": "Date de départ",
+    "passengers": "Passagers",
+    "searchButton": "Rechercher"
+  }
+}
