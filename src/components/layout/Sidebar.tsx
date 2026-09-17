@@ -1,12 +1,14 @@
+'use client';
 import React from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Home, Ticket, Smartphone, Clock, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 export const Sidebar = () => {
   const t = useTranslations('Navigation');
   const pathname = usePathname();
+  const locale = useLocale();
 
   const navItems = [
     { label: t('home'), icon: Home, href: '/search' },
@@ -24,13 +26,13 @@ export const Sidebar = () => {
       
       <nav className="flex-1 px-4 py-6 space-y-2">
         {navItems.map((item) => {
-          const isActive = pathname.includes(item.href);
+          const isActive = pathname === `/${locale}${item.href}` || pathname === item.href;
           const Icon = item.icon;
           
           return (
             <Link 
               key={item.href} 
-              href={item.href}
+              href={`/${locale}${item.href}`}
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${
                 isActive 
                   ? 'bg-brand-lightBlue text-brand-yellow font-semibold' 
