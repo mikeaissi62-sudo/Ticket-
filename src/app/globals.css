@@ -13,6 +13,21 @@
     background: linear-gradient(135deg, #D4DFEE 0%, #DFE8F4 50%, #D8E3F0 100%);
     min-height: 100vh;
   }
+  main > :first-child {
+    margin-top: 0 !important;
+  }
+  main > :last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Hide scrollbar for carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 ::-webkit-scrollbar {

@@ -10,79 +10,80 @@ export const Header = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#CBD5E1]/60">
-        <div className="h-[72px] max-w-[1140px] mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
+      <header className="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+        <div className="h-20 max-w-[1140px] mx-auto px-gutter flex items-center justify-between relative">
+          
           {/* Logo */}
-          <Link href={`/${locale}`} className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-[#0F172A] text-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">confirmation_number</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[17px] font-bold tracking-tight text-[#0F172A] leading-tight">
-                Ticket<span className="text-[#10B981]">+</span>
-              </span>
-              <span className="text-[10px] text-[#64748B] font-medium leading-tight hidden sm:block">
-                Comparateur & Billetterie
-              </span>
-            </div>
-          </Link>
+          <div className="flex items-center gap-2 z-10 shrink-0">
+            <Link href={`/${locale}`} className="flex items-center gap-space-sm text-left group shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-[0_4px_20px_-2px_rgba(15,23,42,0.08)]">
+                <span className="material-symbols-outlined text-[22px]">confirmation_number</span>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-space-xs">
+                  <span className="font-headline-sm text-headline-sm text-on-surface font-bold tracking-tight">Ticket<span className="text-secondary">+</span></span>
+                </div>
+                <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Billetterie Officielle Bénin</span>
+              </div>
+            </Link>
+          </div>
 
-          {/* Navigation Desktop */}
-          <nav className="hidden xl:flex items-center gap-1">
-            <Link href={`/${locale}`} className="px-4 py-2 rounded-lg text-[13px] font-semibold text-[#0F172A] bg-[#F1F5F9] transition-colors">
+          {/* Navigation Desktop (Absolutely Centered) */}
+          <nav className="hidden lg:flex items-center gap-2 xl:gap-4 absolute left-1/2 -translate-x-1/2 shrink-0 whitespace-nowrap">
+            <Link href={`/${locale}`} className="px-space-sm py-2 transition-all bg-surface-container text-on-surface font-semibold rounded-lg font-body-md text-body-md">
               Accueil
             </Link>
-            <Link href={`/${locale}/compagnies`} className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] transition-colors flex items-center gap-2">
+            <Link href={`/${locale}/compagnies`} className="inline-flex items-center gap-1.5 px-space-sm py-2 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all">
               Compagnies
-              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] font-semibold border border-[#10B981]/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
-                1 actif
-              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-[10px] bg-secondary-container text-on-secondary-container font-semibold">1 actif</span>
             </Link>
-            <Link href={`/${locale}/tarifs-et-lignes`} className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
-              Tarifs & Lignes
+            <Link href={`/${locale}/tarifs-et-lignes`} className="px-space-sm py-2 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all">
+              Tarifs &amp; Lignes
             </Link>
-            <Link href={`/${locale}/contact`} className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] transition-colors">
+            <Link href={`/${locale}/contact`} className="px-space-sm py-2 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all">
               Contact
             </Link>
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 z-10 shrink-0">
+            {/* WhatsApp Icon Button */}
             <a
               href="https://wa.me/2290154658907"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium text-[#059669] bg-[#ECFDF5] hover:bg-[#D1FAE5] transition-colors border border-[#10B981]/20"
+              title="Assistance WhatsApp"
+              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-secondary-container/60 hover:bg-secondary-container text-on-secondary-container transition-colors shrink-0"
             >
-              <span className="material-symbols-outlined text-[14px]">support_agent</span>
-              <span>Assistance WhatsApp</span>
+              <span className="material-symbols-outlined text-[20px]">chat</span>
             </a>
 
-            <div className="hidden md:flex items-center px-2.5 py-1 rounded-md text-[11px] text-[#94A3B8] font-medium bg-[#F8FAFC]">
-              <span className="font-semibold text-[#64748B]">XOF</span>
-              <span className="mx-1 text-[#CBD5E1]">/</span>
-              <span>FCFA</span>
+            <div className="hidden md:flex items-center gap-space-xs bg-surface-container-low px-space-sm py-2 rounded-xl whitespace-nowrap h-10">
+              <span className="material-symbols-outlined text-[16px] text-on-surface-variant">payments</span>
+              <span className="font-label-sm text-label-sm text-on-surface font-semibold">XOF (FCFA)</span>
             </div>
 
             <Link
               href={`/${locale}/mon-billet`}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0F172A] text-white text-[13px] font-semibold hover:bg-[#1E293B] transition-colors shadow-sm"
+              className="px-space-md py-2.5 h-10 flex items-center justify-center rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-colors shadow-[0_4px_20px_-2px_rgba(15,23,42,0.08)] whitespace-nowrap"
             >
-              <span className="material-symbols-outlined text-[16px]">confirmation_number</span>
-              <span className="hidden sm:inline">Mon Billet</span>
+              Mon Billet
             </Link>
 
-            <button className="w-9 h-9 rounded-full bg-[#F1F5F9] flex items-center justify-center hover:bg-[#E2E8F0] transition-colors hidden xl:flex">
-              <span className="material-symbols-outlined text-[#0F172A] text-[20px]">person</span>
-            </button>
+            <Link
+              href={`/${locale}/compte-voyageur`}
+              aria-label="Espace Profil Voyageur"
+              className="hidden lg:flex w-10 h-10 rounded-full bg-primary items-center justify-center hover:bg-primary-container transition-colors shrink-0"
+            >
+              <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
+            </Link>
 
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-9 h-9 rounded-full bg-[#F1F5F9] flex items-center justify-center hover:bg-[#E2E8F0] transition-colors xl:hidden"
+              className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors lg:hidden shrink-0"
             >
-              <span className="material-symbols-outlined text-[#0F172A] text-[20px]">
+              <span className="material-symbols-outlined text-on-surface text-[20px]">
                 {mobileMenuOpen ? 'close' : 'menu'}
               </span>
             </button>
@@ -92,27 +93,26 @@ export const Header = () => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 pt-[72px] bg-white/98 backdrop-blur-lg xl:hidden">
+        <div className="fixed inset-0 z-40 pt-20 bg-surface-container-lowest/98 backdrop-blur-lg lg:hidden">
           <nav className="flex flex-col p-4 gap-1">
-            <Link href={`/${locale}`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl text-[15px] font-semibold text-[#0F172A] bg-[#F1F5F9]">
+            <Link href={`/${locale}`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-semibold text-on-surface bg-surface-container">
               Accueil
             </Link>
-            <Link href={`/${locale}/compagnies`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl text-[15px] font-medium text-[#64748B] hover:bg-[#F8FAFC] flex items-center justify-between">
+            <Link href={`/${locale}/compagnies`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-surface-variant hover:bg-surface-container flex items-center justify-between">
               <span>Compagnies</span>
-              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-semibold">
                 1 actif
               </span>
             </Link>
-            <Link href={`/${locale}/tarifs-et-lignes`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl text-[15px] font-medium text-[#64748B] hover:bg-[#F8FAFC]">
-              Tarifs & Lignes
+            <Link href={`/${locale}/tarifs-et-lignes`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-surface-variant hover:bg-surface-container">
+              Tarifs &amp; Lignes
             </Link>
-            <Link href={`/${locale}/contact`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl text-[15px] font-medium text-[#64748B] hover:bg-[#F8FAFC]">
+            <Link href={`/${locale}/contact`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-surface-variant hover:bg-surface-container">
               Contact
             </Link>
-            <hr className="my-2 border-[#E2E8F0]" />
-            <a href="https://wa.me/2290154658907" target="_blank" rel="noopener noreferrer" className="px-4 py-3 rounded-xl text-[15px] font-medium text-[#059669] bg-[#ECFDF5] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">support_agent</span>
+            <hr className="my-2 border-outline-variant" />
+            <a href="https://wa.me/2290154658907" target="_blank" rel="noopener noreferrer" className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-secondary-container bg-secondary-container/60 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">chat</span>
               Assistance WhatsApp
             </a>
           </nav>

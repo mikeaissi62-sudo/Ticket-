@@ -32,10 +32,10 @@ export default async function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
       </head>
-      <body className="font-sans text-[#0F172A] antialiased min-h-screen" style={{ background: 'linear-gradient(135deg, #D4DFEE 0%, #DFE8F4 50%, #D8E3F0 100%)' }}>
+      <body className="bg-background font-body-md text-on-surface antialiased min-h-screen" style={{ background: 'linear-gradient(135deg, #D4DFEE 0%, #DFE8F4 50%, #D8E3F0 100%)' }}>
         <NextIntlClientProvider messages={messages}>
           <Header />
-          <main className="w-full pt-[72px] min-h-screen">
+          <main className="w-full pt-20 min-h-screen" style={{ background: 'transparent' }}>
             {children}
           </main>
           <Footer />

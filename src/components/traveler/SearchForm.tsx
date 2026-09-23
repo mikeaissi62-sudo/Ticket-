@@ -47,7 +47,8 @@ export const SearchForm = () => {
   };
 
   const handleSearch = () => {
-    router.push(`/${locale}/resultats`);
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    router.push(`/${locale}/results?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
   };
 
   const formatDate = (date: Date) => {
