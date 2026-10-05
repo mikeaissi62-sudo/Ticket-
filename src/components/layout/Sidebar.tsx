@@ -11,7 +11,7 @@ export const Sidebar = () => {
   const locale = useLocale();
 
   const navItems = [
-    { label: t('home'), icon: Home, href: '/search' },
+    { label: t('home'), icon: Home, href: '/recherche' },
     { label: t('tickets'), icon: Ticket, href: '/tickets' },
     { label: t('momo'), icon: Smartphone, href: '/momo' },
     { label: t('schedules'), icon: Clock, href: '/schedules' },

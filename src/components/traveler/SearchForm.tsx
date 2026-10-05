@@ -6,11 +6,11 @@ import { useLocale } from 'next-intl';
 
 const CITIES = [
   { name: 'Cotonou', station: 'Gare Étoile Rouge' },
-  { name: 'Parakou', station: 'Terminus Confort Lines' },
+  { name: 'Parakou', station: 'Gare Principale' },
   { name: 'Bohicon', station: 'Gare Routière' },
   { name: 'Natitingou', station: 'Agence Principale' },
   { name: 'Djougou', station: 'Gare Centrale' },
-  { name: 'Tanguiéta', station: 'Agence Confort Lines' },
+  { name: 'Tanguiéta', station: 'Agence Partenaires' },
 ];
 
 const WEEKDAYS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
@@ -48,7 +48,7 @@ export const SearchForm = () => {
 
   const handleSearch = () => {
     const dateStr = selectedDate.toISOString().split('T')[0];
-    router.push(`/${locale}/results?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
+    router.push(`/${locale}/resultats?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
   };
 
   const formatDate = (date: Date) => {

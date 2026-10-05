@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useLocale } from 'next-intl';
 
 interface LineCardProps {
   from: string;
@@ -13,40 +14,47 @@ interface LineCardProps {
 }
 
 export const LineCard = ({ from, to, price, details, duration, tag }: LineCardProps) => {
+  const locale = useLocale();
+  
+  // Set default date to today for the quick search link
+  const todayStr = new Date().toISOString().split('T')[0];
+  
+  const searchUrl = `/${locale}/resultats?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${todayStr}&passengers=1`;
+
   return (
-    <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden">
+    <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden">
       {/* Top tag bar */}
-      <div className="px-4 pt-3.5 pb-2 flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] font-semibold border border-[#10B981]/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
-          Opéré par Confort Lines
+      <div className="px-space-sm pt-space-sm pb-2 flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-semibold border border-secondary/20">
+          <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+          Partenaires Officiels
         </span>
-        <span className="text-[10px] text-[#94A3B8] font-medium">{tag}</span>
+        <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">{tag}</span>
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-2">
-        <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">
+      <div className="px-space-sm pb-2">
+        <h3 className="font-title-md text-title-md font-bold text-on-surface mb-1">
           {from} ⇄ {to}
         </h3>
-        <p className="text-[12px] text-[#64748B] flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[14px] text-[#10B981]">directions_bus</span>
+        <p className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[14px] text-secondary">directions_bus</span>
           {details}
         </p>
       </div>
 
       {/* Price + CTA */}
-      <div className="px-4 pb-4 mt-auto">
+      <div className="px-space-sm pb-space-sm mt-auto">
         <div className="mb-3">
-          <span className="text-[11px] text-[#94A3B8] font-medium">Tarif officiel dès</span>
+          <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Tarif officiel dès</span>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-[28px] font-extrabold text-[#0F172A] tracking-tight">{price}</span>
-            <span className="text-[13px] text-[#94A3B8] font-medium">FCFA</span>
+            <span className="font-display-sm text-display-sm font-extrabold text-on-surface tracking-tight">{price}</span>
+            <span className="font-body-md text-body-md text-on-surface-variant font-medium">FCFA</span>
           </div>
         </div>
         <Link
-          href="#"
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0F172A] text-white text-[13px] font-semibold hover:bg-[#1E293B] transition-all"
+          href={searchUrl}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-semibold hover:bg-primary-container transition-all"
         >
           Voir les départs / Réserver
         </Link>

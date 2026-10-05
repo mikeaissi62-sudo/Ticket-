@@ -3,10 +3,19 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
+import { usePathname } from 'next/navigation';
 
 export const Header = () => {
   const locale = useLocale();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isActive = (path: string) => {
+    if (path === `/${locale}`) {
+      return pathname === `/${locale}` || pathname === `/${locale}/`;
+    }
+    return pathname.startsWith(path);
+  };
 
   return (
     <>
@@ -30,17 +39,45 @@ export const Header = () => {
 
           {/* Navigation Desktop (Absolutely Centered) */}
           <nav className="hidden lg:flex items-center gap-2 xl:gap-4 absolute left-1/2 -translate-x-1/2 shrink-0 whitespace-nowrap">
-            <Link href={`/${locale}`} className="px-space-sm py-2 transition-all bg-surface-container text-on-surface font-semibold rounded-lg font-body-md text-body-md">
+            <Link 
+              href={`/${locale}`} 
+              className={`px-space-sm py-2 transition-all rounded-lg font-body-md text-body-md ${
+                isActive(`/${locale}`) 
+                  ? 'bg-surface-container text-on-surface font-semibold' 
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`}
+            >
               Accueil
             </Link>
-            <Link href={`/${locale}/compagnies`} className="inline-flex items-center gap-1.5 px-space-sm py-2 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all">
+            <Link 
+              href={`/${locale}/compagnies`} 
+              className={`inline-flex items-center gap-1.5 px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
+                isActive(`/${locale}/compagnies`)
+                  ? 'bg-surface-container text-on-surface font-semibold'
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`}
+            >
               Compagnies
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-[10px] bg-secondary-container text-on-secondary-container font-semibold">1 actif</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-[10px] bg-secondary-container text-on-secondary-container font-semibold">4 actifs</span>
             </Link>
-            <Link href={`/${locale}/tarifs-et-lignes`} className="px-space-sm py-2 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all">
+            <Link 
+              href={`/${locale}/tarifs-et-lignes`} 
+              className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
+                isActive(`/${locale}/tarifs-et-lignes`)
+                  ? 'bg-surface-container text-on-surface font-semibold'
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`}
+            >
               Tarifs &amp; Lignes
             </Link>
-            <Link href={`/${locale}/contact`} className="px-space-sm py-2 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all">
+            <Link 
+              href={`/${locale}/contact`} 
+              className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
+                isActive(`/${locale}/contact`)
+                  ? 'bg-surface-container text-on-surface font-semibold'
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`}
+            >
               Contact
             </Link>
           </nav>
@@ -71,7 +108,7 @@ export const Header = () => {
             </Link>
 
             <Link
-              href={`/${locale}/compte-voyageur`}
+              href={`/${locale}/profil`}
               aria-label="Espace Profil Voyageur"
               className="hidden lg:flex w-10 h-10 rounded-full bg-primary items-center justify-center hover:bg-primary-container transition-colors shrink-0"
             >
@@ -95,19 +132,51 @@ export const Header = () => {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 pt-20 bg-surface-container-lowest/98 backdrop-blur-lg lg:hidden">
           <nav className="flex flex-col p-4 gap-1">
-            <Link href={`/${locale}`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-semibold text-on-surface bg-surface-container">
+            <Link 
+              href={`/${locale}`} 
+              onClick={() => setMobileMenuOpen(false)} 
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
+                isActive(`/${locale}`) 
+                  ? 'bg-surface-container text-on-surface font-semibold' 
+                  : 'text-on-surface-variant hover:bg-surface-container font-medium'
+              }`}
+            >
               Accueil
             </Link>
-            <Link href={`/${locale}/compagnies`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-surface-variant hover:bg-surface-container flex items-center justify-between">
+            <Link 
+              href={`/${locale}/compagnies`} 
+              onClick={() => setMobileMenuOpen(false)} 
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center justify-between ${
+                isActive(`/${locale}/compagnies`)
+                  ? 'bg-surface-container text-on-surface font-semibold'
+                  : 'text-on-surface-variant hover:bg-surface-container font-medium'
+              }`}
+            >
               <span>Compagnies</span>
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-semibold">
-                1 actif
+                4 actifs
               </span>
             </Link>
-            <Link href={`/${locale}/tarifs-et-lignes`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-surface-variant hover:bg-surface-container">
+            <Link 
+              href={`/${locale}/tarifs-et-lignes`} 
+              onClick={() => setMobileMenuOpen(false)} 
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
+                isActive(`/${locale}/tarifs-et-lignes`)
+                  ? 'bg-surface-container text-on-surface font-semibold'
+                  : 'text-on-surface-variant hover:bg-surface-container font-medium'
+              }`}
+            >
               Tarifs &amp; Lignes
             </Link>
-            <Link href={`/${locale}/contact`} onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-surface-variant hover:bg-surface-container">
+            <Link 
+              href={`/${locale}/contact`} 
+              onClick={() => setMobileMenuOpen(false)} 
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
+                isActive(`/${locale}/contact`)
+                  ? 'bg-surface-container text-on-surface font-semibold'
+                  : 'text-on-surface-variant hover:bg-surface-container font-medium'
+              }`}
+            >
               Contact
             </Link>
             <hr className="my-2 border-outline-variant" />

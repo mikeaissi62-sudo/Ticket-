@@ -11,11 +11,11 @@ export const BottomNav = () => {
   const locale = useLocale();
 
   const navItems = [
-    { label: t('home') || 'Accueil', icon: Bus, href: '/search' },
-    { label: t('tickets') || 'Billets', icon: Ticket, href: '/tickets' },
+    { label: 'Accueil', icon: Bus, href: '/' },
+    { label: 'Billets', icon: Ticket, href: '/mon-billet' },
     { isFab: true }, // Placeholder for the FAB
-    { label: t('schedules') || 'Horaires', icon: Clock, href: '/schedules' },
-    { label: t('account') || 'Compte', icon: User, href: '/account' },
+    { label: 'Tarifs', icon: Clock, href: '/tarifs-et-lignes' },
+    { label: 'Profil', icon: User, href: '/profil' },
   ];
 
   return (
@@ -30,15 +30,19 @@ export const BottomNav = () => {
             );
           }
 
-          const isActive = pathname === `/${locale}${item.href}` || pathname === item.href;
+          const href = item.href === '/' ? `/${locale}` : `/${locale}${item.href}`;
+          const isActive = item.href === '/' 
+            ? (pathname === `/${locale}` || pathname === `/${locale}/`)
+            : pathname.startsWith(href);
+            
           const Icon = item.icon!;
           
           return (
             <Link 
               key={item.href} 
-              href={`/${locale}${item.href}`}
+              href={href}
               className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-colors ${
-                isActive ? 'text-brand-blue' : 'text-gray-400 hover:text-gray-600'
+                isActive ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
               <Icon className="w-6 h-6" />
