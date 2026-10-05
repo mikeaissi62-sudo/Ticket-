@@ -21,6 +21,7 @@ interface TripCardProps {
   priceLabel: string;
   variant?: 'default' | 'express' | 'vip-soiree';
   urgentSeats?: boolean;
+  onSelect?: () => void;
 }
 
 export const TripCard: React.FC<TripCardProps> = ({
@@ -40,6 +41,7 @@ export const TripCard: React.FC<TripCardProps> = ({
   priceLabel,
   variant = 'default',
   urgentSeats = false,
+  onSelect,
 }) => {
   const amenityIcons: Record<string, string> = {
     'Climatisation': 'ac_unit',
@@ -139,10 +141,10 @@ export const TripCard: React.FC<TripCardProps> = ({
           <p className="text-[11px] text-[#64748B]">{priceLabel}</p>
         </div>
 
-        <Link href={`/fr/reservation/1`} className="w-full sm:w-auto px-6 py-3 bg-[#0F172A] text-white text-[14px] font-semibold rounded-xl hover:bg-[#1E293B] transition-colors flex items-center justify-center gap-2 shadow-sm">
+        <button onClick={onSelect} className="w-full sm:w-auto px-6 py-3 bg-[#0F172A] text-white text-[14px] font-semibold rounded-xl hover:bg-[#1E293B] transition-colors flex items-center justify-center gap-2 shadow-sm">
           Choisir mon siège
           <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-        </Link>
+        </button>
       </div>
     </div>
   );

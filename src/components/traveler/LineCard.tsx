@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { useSearchStore } from '@/stores/searchStore';
 
 interface LineCardProps {
   from: string;
@@ -15,11 +16,19 @@ interface LineCardProps {
 
 export const LineCard = ({ from, to, price, details, duration, tag }: LineCardProps) => {
   const locale = useLocale();
+  const router = useRouter();
+  const { setSearch } = useSearchStore();
   
   // Set default date to today for the quick search link
   const todayStr = new Date().toISOString().split('T')[0];
   
   const searchUrl = `/${locale}/resultats?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${todayStr}&passengers=1`;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setSearch(from, to, todayStr, 1);
+    router.push(searchUrl);
+  };
 
   return (
     <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden">
@@ -52,12 +61,12 @@ export const LineCard = ({ from, to, price, details, duration, tag }: LineCardPr
             <span className="font-body-md text-body-md text-on-surface-variant font-medium">FCFA</span>
           </div>
         </div>
-        <Link
-          href={searchUrl}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-semibold hover:bg-primary-container transition-all"
+        <button
+          onClick={handleClick}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md font-semibold hover:bg-primary-container hover:text-on-primary-container transition-all"
         >
           Voir les départs / Réserver
-        </Link>
+        </button>
       </div>
     </div>
   );

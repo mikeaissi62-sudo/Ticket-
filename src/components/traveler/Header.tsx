@@ -43,7 +43,7 @@ export const Header = () => {
               href={`/${locale}`} 
               className={`px-space-sm py-2 transition-all rounded-lg font-body-md text-body-md ${
                 isActive(`/${locale}`) 
-                  ? 'bg-surface-container text-on-surface font-semibold' 
+                  ? 'bg-primary-container/30 text-primary font-bold' 
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -53,7 +53,7 @@ export const Header = () => {
               href={`/${locale}/compagnies`} 
               className={`inline-flex items-center gap-1.5 px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
                 isActive(`/${locale}/compagnies`)
-                  ? 'bg-surface-container text-on-surface font-semibold'
+                  ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -64,7 +64,7 @@ export const Header = () => {
               href={`/${locale}/tarifs-et-lignes`} 
               className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
                 isActive(`/${locale}/tarifs-et-lignes`)
-                  ? 'bg-surface-container text-on-surface font-semibold'
+                  ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -74,7 +74,7 @@ export const Header = () => {
               href={`/${locale}/contact`} 
               className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
                 isActive(`/${locale}/contact`)
-                  ? 'bg-surface-container text-on-surface font-semibold'
+                  ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -137,7 +137,7 @@ export const Header = () => {
               onClick={() => setMobileMenuOpen(false)} 
               className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
                 isActive(`/${locale}`) 
-                  ? 'bg-surface-container text-on-surface font-semibold' 
+                  ? 'bg-primary-container/30 text-primary font-bold' 
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
               }`}
             >
@@ -148,7 +148,7 @@ export const Header = () => {
               onClick={() => setMobileMenuOpen(false)} 
               className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center justify-between ${
                 isActive(`/${locale}/compagnies`)
-                  ? 'bg-surface-container text-on-surface font-semibold'
+                  ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
               }`}
             >
@@ -162,7 +162,7 @@ export const Header = () => {
               onClick={() => setMobileMenuOpen(false)} 
               className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
                 isActive(`/${locale}/tarifs-et-lignes`)
-                  ? 'bg-surface-container text-on-surface font-semibold'
+                  ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
               }`}
             >
@@ -173,11 +173,23 @@ export const Header = () => {
               onClick={() => setMobileMenuOpen(false)} 
               className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
                 isActive(`/${locale}/contact`)
-                  ? 'bg-surface-container text-on-surface font-semibold'
+                  ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
               }`}
             >
               Contact
+            </Link>
+            <Link 
+              href={`/${locale}/profil`} 
+              onClick={() => setMobileMenuOpen(false)} 
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center gap-2 ${
+                isActive(`/${locale}/profil`)
+                  ? 'bg-primary-container/30 text-primary font-bold'
+                  : 'text-on-surface-variant hover:bg-surface-container font-medium'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">person</span>
+              Mon Profil
             </Link>
             <hr className="my-2 border-outline-variant" />
             <a href="https://wa.me/2290154658907" target="_blank" rel="noopener noreferrer" className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-secondary-container bg-secondary-container/60 flex items-center gap-2">

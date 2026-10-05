@@ -1,93 +1,56 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useBookingStore } from '@/stores/bookingStore';
+import { COMPANIES, STATIONS } from '@/lib/mock-data';
 import { useLocale } from 'next-intl';
 
 export default function BookingPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const locale = useLocale();
   const router = useRouter();
   const tripId = params.id;
   
-  const from = searchParams.get('from') || 'Cotonou';
-  const to = searchParams.get('to') || 'Parakou';
-  const dateParam = searchParams.get('date') || new Date().toISOString().split('T')[0];
-  const passengers = searchParams.get('passengers') || '1';
-
+  const { selectedTrip, setPassengerInfo, setExtras, setPaymentMethod: setStorePaymentMethod, selectSeats } = useBookingStore();
+  
   const [selectedSeat, setSelectedSeat] = useState<string>("12");
   const [extraLuggage, setExtraLuggage] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("mtn");
-  
-  let companyName = "Confort Lines VIP";
-  let carName = "Autocar Scania Touring VIP";
-  let bannerImg = "/images/bus-banner.jpg";
-  if (tripId === "4") {
-    companyName = "Baobab Express";
-    carName = "Autocar Baobab Express";
-  } else if (tripId === "5") {
-    companyName = "ATT Transports";
-    carName = "Autocar ATT Transports";
-  } else if (tripId === "6") {
-    companyName = "STM Voyageurs";
-    carName = "Autocar STM Voyageurs";
-  }
 
-  // Dynamic seat configurations based on tripId
-  let disabledSeats: string[] = [];
-  if (tripId === "2") {
-    // 15 places restantes
-    disabledSeats = ["01", "02", "03", "05", "06", "08", "10", "11", "14", "15", "17", "18", "21", "22", "26", "27", "30"];
-  } else if (tripId === "3") {
-    // 5 places restantes
-    disabledSeats = ["01", "02", "03", "04", "05", "06", "08", "09", "10", "11", "13", "14", "15", "16", "17", "18", "20", "21", "22", "23", "25", "26", "27", "28", "29", "30", "32"];
-  } else if (tripId === "4") {
-    // 18 places restantes (Baobab Express)
-    disabledSeats = ["02", "04", "07", "09", "12", "14", "16", "20", "22", "25", "28", "29", "31", "32"];
-  } else if (tripId === "5") {
-    // 12 places restantes (ATT Transports)
-    disabledSeats = ["01", "03", "04", "05", "06", "08", "09", "10", "13", "14", "15", "16", "18", "19", "21", "24", "26", "27", "28", "30"];
-  } else if (tripId === "6") {
-    // 30 places restantes (STM Voyageurs)
-    disabledSeats = ["10", "23"];
-  } else {
-    // 23 places restantes (default/id=1)
-    disabledSeats = ["01", "03", "05", "08", "10", "15", "17", "22", "27"];
-  }
-
-  // Effect to automatically select a free seat if the default "12" is locked
   React.useEffect(() => {
-    if (disabledSeats.includes(selectedSeat)) {
-      const allSeats = Array.from({length: 32}, (_, i) => (i + 1).toString().padStart(2, '0'));
-      const firstFree = allSeats.find(s => !disabledSeats.includes(s));
-      if (firstFree) setSelectedSeat(firstFree);
+    if (!selectedTrip) {
+      router.push(`/${locale}/resultats`);
     }
-  }, [tripId]);
+  }, [selectedTrip, router, locale]);
 
-  const ROUTES = [
-    { from: 'Cotonou', to: 'Parakou', distance: '420 km', duration: '6h 30m', price: 6500 },
-    { from: 'Cotonou', to: 'Natitingou', distance: '560 km', duration: '9h 45m', price: 9000 },
-    { from: 'Cotonou', to: 'Bohicon', distance: '120 km', duration: '2h 15m', price: 3500 },
-    { from: 'Cotonou', to: 'Djougou', distance: '460 km', duration: '7h 30m', price: 8000 },
-    { from: 'Cotonou', to: 'Tanguiéta', distance: '600 km', duration: '10h 30m', price: 10000 },
-    { from: 'Parakou', to: 'Natitingou', distance: '140 km', duration: '3h 00m', price: 4000 },
-    { from: 'Bohicon', to: 'Parakou', distance: '300 km', duration: '4h 30m', price: 5000 },
-    { from: 'Cotonou', to: 'Porto-Novo', distance: '30 km', duration: '0h 45m', price: 1500 },
-  ];
+  React.useEffect(() => {
+    if (selectedTrip) {
+      const disabledSeats = selectedTrip.disabledSeats.map(s => s.toString().padStart(2, '0'));
+      if (disabledSeats.includes(selectedSeat)) {
+        const allSeats = Array.from({length: 32}, (_, i) => (i + 1).toString().padStart(2, '0'));
+        const firstFree = allSeats.find(s => !disabledSeats.includes(s));
+        if (firstFree) setSelectedSeat(firstFree);
+      }
+    }
+  }, [selectedTrip, selectedSeat]);
 
-  const currentRoute = ROUTES.find(r => 
-    (r.from.toLowerCase() === from.toLowerCase() && r.to.toLowerCase() === to.toLowerCase()) || 
-    (r.to.toLowerCase() === from.toLowerCase() && r.from.toLowerCase() === to.toLowerCase())
-  ) || { price: 6500, duration: '6h 30m', distance: '420 km' };
+  if (!selectedTrip) {
+    return <div className="p-8 text-center text-on-surface">Redirection vers les résultats...</div>;
+  }
 
-  // Apply company-specific price multiplier
-  let priceMultiplier = 1;
-  if (tripId === "4") priceMultiplier = 0.9;       // Baobab Express −10%
-  else if (tripId === "5") priceMultiplier = 1.1;   // ATT Transports +10%
-  else if (tripId === "6") priceMultiplier = 0.8;   // STM Voyageurs −20%
+  const company = COMPANIES.find(c => c.id === selectedTrip.companyId) || COMPANIES[0];
+  const companyName = company.name;
+  const carName = `Autocar ${companyName}`;
+  const bannerImg = "/images/bus-banner.jpg";
   
-  const basePrice = Math.round(currentRoute.price * priceMultiplier);
+  const disabledSeats = selectedTrip.disabledSeats.map(s => s.toString().padStart(2, '0'));
+
+  const from = STATIONS.find(s => s.id === selectedTrip.departureStationId)?.city || 'Cotonou';
+  const to = STATIONS.find(s => s.id === selectedTrip.arrivalStationId)?.city || 'Parakou';
+  const dateParam = selectedTrip.date;
+
+  const basePrice = selectedTrip.price;
   const extraLuggagePrice = extraLuggage ? 1000 : 0;
   const totalPrice = basePrice + extraLuggagePrice;
   
@@ -96,9 +59,21 @@ export default function BookingPage() {
   };
   
   const handlePaymentSubmit = () => {
-    // Collect form data
     const nameEl = document.getElementById('fullName') as HTMLInputElement;
     const phoneEl = document.getElementById('phone') as HTMLInputElement;
+    const emailEl = document.getElementById('email') as HTMLInputElement;
+    
+    setPassengerInfo({
+      firstName: nameEl?.value.split(' ')[0] || 'Voyageur',
+      lastName: nameEl?.value.split(' ').slice(1).join(' ') || '',
+      phone: phoneEl?.value || '',
+      idType: 'cni'
+    });
+    
+    setExtras(extraLuggage, true);
+    setStorePaymentMethod(paymentMethod);
+    selectSeats([parseInt(selectedSeat, 10)]);
+
     const confirmParams = new URLSearchParams({
       from,
       to,
@@ -350,15 +325,15 @@ export default function BookingPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-space-md items-center">
                 <div className="md:col-span-5">
-                  <div className="font-headline-md text-headline-md font-bold text-on-surface">07:00</div>
+                  <div className="font-headline-md text-headline-md font-bold text-on-surface">{selectedTrip.departureTime}</div>
                   <div className="font-body-md text-body-md font-semibold text-on-surface">{from}</div>
                   <div className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1 mt-0.5">
                     <span className="material-symbols-outlined text-[14px] text-secondary">location_on</span>
-                    Gare Étoile Rouge
+                    {STATIONS.find(s => s.id === selectedTrip.departureStationId)?.name || 'Gare'}
                   </div>
                 </div>
                 <div className="md:col-span-2 flex flex-col items-center justify-center my-1 md:my-0">
-                  <span className="font-label-sm text-label-sm text-outline font-medium">6h 30m</span>
+                  <span className="font-label-sm text-label-sm text-outline font-medium">{selectedTrip.duration}</span>
                   <div className="w-full flex items-center justify-center gap-1 my-1">
                     <div className="h-0.5 bg-outline-variant w-full"></div>
                     <span className="material-symbols-outlined text-[16px] text-secondary">directions_bus</span>
@@ -367,7 +342,7 @@ export default function BookingPage() {
                   <span className="font-label-sm text-[10px] text-secondary font-semibold">Direct</span>
                 </div>
                 <div className="md:col-span-5 md:text-right">
-                  <div className="font-headline-md text-headline-md font-bold text-on-surface">13:30</div>
+                  <div className="font-headline-md text-headline-md font-bold text-on-surface">{selectedTrip.arrivalTime}</div>
                   <div className="font-body-md text-body-md font-semibold text-on-surface">{to}</div>
                   <div className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1 mt-0.5">
                     <span className="material-symbols-outlined text-[14px] text-secondary">pin_drop</span>

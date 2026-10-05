@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
+import { generateMockTrips, COMPANIES, STATIONS } from '@/lib/mock-data';
+import { useBookingStore } from '@/stores/bookingStore';
+import { TripCard } from '@/components/traveler/results/TripCard';
 
 const cities = ["Cotonou", "Parakou", "Bohicon", "Natitingou", "Djougou", "Porto-Novo", "Abomey"];
 
@@ -20,6 +23,7 @@ export default function ResultsPage() {
   const today = new Date();
   const defaultDate = today.toISOString().split('T')[0];
   const dateParam = searchParams.get('date') || defaultDate;
+  const { selectTrip } = useBookingStore();
   const passengers = searchParams.get('passengers') || '1';
 
   const ROUTES = [
@@ -54,49 +58,26 @@ export default function ResultsPage() {
   const [filterDirect, setFilterDirect] = useState(false);
   const [sortBy, setSortBy] = useState('timeAsc');
 
-  // Departure data for sorting/filtering
-  const d1_time = 700; const d1_price = basePrice; const d1_seats = 23; 
-  const d1_vip = true; const d1_direct = true; const d1_company = 'confort';
-
-  const d2_time = 930; const d2_price = basePrice; const d2_seats = 15; 
-  const d2_vip = false; const d2_direct = false; const d2_company = 'confort';
-
-  const d3_time = 1400; const d3_price = basePrice; const d3_seats = 5; 
-  const d3_vip = true; const d3_direct = true; const d3_company = 'confort';
-
-  const d4_time = 800; const d4_price = basePrice * 0.9; const d4_seats = 18;
-  const d4_vip = false; const d4_direct = true; const d4_company = 'baobab';
-
-  const d5_time = 1100; const d5_price = basePrice * 1.1; const d5_seats = 12;
-  const d5_vip = true; const d5_direct = true; const d5_company = 'att';
-
-  const d6_time = 1530; const d6_price = basePrice * 0.8; const d6_seats = 30;
-  const d6_vip = false; const d6_direct = false; const d6_company = 'stm';
-
+  const allTrips = generateMockTrips(from, to, dateParam);
+  let trips = allTrips;
   const isCompanySelected = filterConfort || filterBaobab || filterATT || filterSTM;
+  if (isCompanySelected) {
+    trips = trips.filter(t => 
+      (filterConfort && t.companyId === 'c-1') ||
+      (filterBaobab && t.companyId === 'c-2') ||
+      (filterATT && t.companyId === 'c-3') ||
+      (filterSTM && t.companyId === 'c-4')
+    );
+  }
+  if (filterVIP) trips = trips.filter(t => t.features.includes('ac'));
+  if (filterDirect) trips = trips.filter(t => t.duration.startsWith('2h') || t.duration.startsWith('3h')); // dummy direct
 
-  const showD1 = (!isCompanySelected || filterConfort) && (!filterVIP || d1_vip) && (!filterDirect || d1_direct);
-  const showD2 = (!isCompanySelected || filterConfort) && (!filterVIP || d2_vip) && (!filterDirect || d2_direct);
-  const showD3 = (!isCompanySelected || filterConfort) && (!filterVIP || d3_vip) && (!filterDirect || d3_direct);
-  const showD4 = (!isCompanySelected || filterBaobab) && (!filterVIP || d4_vip) && (!filterDirect || d4_direct);
-  const showD5 = (!isCompanySelected || filterATT) && (!filterVIP || d5_vip) && (!filterDirect || d5_direct);
-  const showD6 = (!isCompanySelected || filterSTM) && (!filterVIP || d6_vip) && (!filterDirect || d6_direct);
-
-  const getOrder = (id: number) => {
-    const data = [
-      { id: 1, t: d1_time, p: d1_price, s: d1_seats },
-      { id: 2, t: d2_time, p: d2_price, s: d2_seats },
-      { id: 3, t: d3_time, p: d3_price, s: d3_seats },
-      { id: 4, t: d4_time, p: d4_price, s: d4_seats },
-      { id: 5, t: d5_time, p: d5_price, s: d5_seats },
-      { id: 6, t: d6_time, p: d6_price, s: d6_seats },
-    ];
-    if (sortBy === 'timeAsc') data.sort((a,b) => a.t - b.t);
-    else if (sortBy === 'priceAsc') data.sort((a,b) => a.p - b.p);
-    else if (sortBy === 'seatsDesc') data.sort((a,b) => b.s - a.s);
-    
-    return data.findIndex(d => d.id === id);
-  };
+  trips.sort((a, b) => {
+    if (sortBy === 'timeAsc') return a.departureTime.localeCompare(b.departureTime);
+    if (sortBy === 'priceAsc') return a.price - b.price;
+    if (sortBy === 'seatsDesc') return b.availableSeats - a.availableSeats;
+    return 0;
+  });
 
   // Sync edit state with URL params
   useEffect(() => {
@@ -389,7 +370,7 @@ export default function ResultsPage() {
           {/* ======== List of Departures (8 columns) ======== */}
           <div className="lg:col-span-8 flex flex-col gap-space-md">
             
-            {!showD1 && !showD2 && !showD3 && !showD4 && !showD5 && !showD6 && (
+                        {trips.length === 0 && (
               <div className="bg-surface-container-lowest rounded-xl p-space-lg text-center shadow-sm">
                 <span className="material-symbols-outlined text-outline text-[48px] mb-4">search_off</span>
                 <h3 className="font-title-lg text-title-lg font-bold text-on-surface mb-2">Aucun départ ne correspond</h3>
@@ -398,519 +379,35 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* ---- Departure 1: 07:00 VIP Morning ---- */}
-            {showD1 && (
-            <div className="bg-surface-container-lowest rounded-xl p-space-md md:p-space-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group" style={{ order: getOrder(1) }}>
-              {/* Header */}
-              <div className="flex items-center justify-between pb-space-sm mb-space-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-                    <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-title-md text-title-md font-bold text-on-surface">Confort Lines</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-[12px]">verified</span> Partenaire Officiel
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Autocar Grand Tourisme VIP • RNIE 2 Direct</span>
-                  </div>
+            {trips.map((trip) => {
+              const company = COMPANIES.find((c) => c.id === trip.companyId) || COMPANIES[0];
+              const depStation = STATIONS.find(s => s.id === trip.departureStationId)?.name || '';
+              const arrStation = STATIONS.find(s => s.id === trip.arrivalStationId)?.name || '';
+              return (
+                <div key={trip.id} className="relative">
+                  <TripCard
+                    companyName={company.name}
+                    companySubtitle={company.subtitle || "Transport de voyageurs"}
+                    isPartnerOfficial={company.isOfficialPartner || false}
+                    seatsLeft={trip.availableSeats}
+                    departureTime={trip.departureTime}
+                    departureLabel=""
+                    departureStation={depStation}
+                    arrivalTime={trip.arrivalTime}
+                    arrivalStation={arrStation}
+                    duration={trip.duration}
+                    directLabel={trip.features.includes("direct") ? "Trajet Direct" : "Avec arrêts"}
+                    amenities={trip.features}
+                    price={trip.price}
+                    priceLabel=""
+                    onSelect={() => {
+                      selectTrip(trip);
+                      router.push(`/${locale}/reservation/${trip.id}`);
+                    }}
+                  />
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary/10 text-secondary">
-                  <span className="material-symbols-outlined text-[16px]">airline_seat_recline_normal</span>
-                  <span className="font-label-md text-label-md font-bold">23 places restantes</span>
-                </div>
-              </div>
-
-              {/* Schedule & Stations Matrix */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md items-center my-space-md py-space-sm bg-surface-container-low/40 px-space-md rounded-xl">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">07:00</span>
-                    <span className="font-label-sm text-[10px] uppercase font-bold text-secondary bg-surface-container px-1.5 py-0.5 rounded">Matin</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{from}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Gare Étoile Rouge
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant font-medium mb-1">{currentRoute.duration} de trajet</span>
-                  <div className="w-full flex items-center gap-1 text-outline">
-                    <span className="w-2 h-2 rounded-full bg-primary"></span>
-                    <div className="flex-1 h-[2px] bg-outline-variant relative">
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-secondary">
-                        <span className="material-symbols-outlined text-[16px]">directions_bus</span>
-                      </span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  </div>
-                  <span className="font-label-sm text-[10px] text-secondary font-semibold mt-1">Direct sans escale longue</span>
-                </div>
-                <div className="flex flex-col md:text-right">
-                  <div className="flex items-center md:justify-end gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">13:30</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{to}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Terminus Gare Centrale {to}
-                  </span>
-                </div>
-              </div>
-
-              {/* Amenities */}
-              <div className="flex items-center gap-space-sm flex-wrap py-2">
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">ac_unit</span> Climatisation continue
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">wifi</span> Wi-Fi HD 4G
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">power</span> Prises USB / 220V
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">airline_seat_recline_extra</span> Sièges Inclinables
-                </span>
-              </div>
-
-              {/* Price + CTA */}
-              <div className="pt-space-md mt-space-sm flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
-                <div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[28px] leading-8 font-bold text-on-surface">{formatPrice(d1_price)}</span>
-                    <span className="font-body-md text-body-md font-semibold text-on-surface-variant">FCFA</span>
-                  </div>
-                </div>
-                <Link href={`/${locale}/reservation/1?${bookingParams}`} className="px-space-md py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-all shadow-md flex items-center justify-center gap-2 group-hover:scale-[1.01]">
-                  <span>Choisir mon siège</span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </Link>
-              </div>
-            </div>
-            )}
-
-            {/* ---- Departure 2: 09:30 Confort Lines Express ---- */}
-            {showD2 && (
-            <div className="bg-surface-container-lowest rounded-xl p-space-md md:p-space-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group" style={{ order: getOrder(2) }}>
-              <div className="flex items-center justify-between pb-space-sm mb-space-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-                    <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-title-md text-title-md font-bold text-on-surface">Confort Lines Express</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-[12px]">verified</span> Partenaire Officiel
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Départ Gare Jonquet • Collation et boisson offertes</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">
-                  <span className="material-symbols-outlined text-[16px]">airline_seat_recline_normal</span>
-                  <span className="font-label-md text-label-md font-bold">15 places restantes</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md items-center my-space-md py-space-sm bg-surface-container-low/40 px-space-md rounded-xl">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">09:30</span>
-                    <span className="font-label-sm text-[10px] uppercase font-bold text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">Matinée</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{from}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Agence Principale Jonquet
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant font-medium mb-1">{currentRoute.duration} de trajet</span>
-                  <div className="w-full flex items-center gap-1 text-outline">
-                    <span className="w-2 h-2 rounded-full bg-primary"></span>
-                    <div className="flex-1 h-[2px] bg-outline-variant relative">
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-secondary">
-                        <span className="material-symbols-outlined text-[16px]">directions_bus</span>
-                      </span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  </div>
-                  <span className="font-label-sm text-[10px] text-secondary font-semibold mt-1">Arrêt rapide Bohicon</span>
-                </div>
-                <div className="flex flex-col md:text-right">
-                  <div className="flex items-center md:justify-end gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">16:00</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{to}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Terminus Gare Centrale
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-space-sm flex-wrap py-2">
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">ac_unit</span> Climatisation intégrale
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">bakery_dining</span> Collation incluse
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">luggage</span> Bagage 25kg inclus
-                </span>
-              </div>
-
-              <div className="pt-space-md mt-space-sm flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
-                <div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[28px] leading-8 font-bold text-on-surface">{formatPrice(d2_price)}</span>
-                    <span className="font-body-md text-body-md font-semibold text-on-surface-variant">FCFA</span>
-                  </div>
-                </div>
-                <Link href={`/${locale}/reservation/2?${bookingParams}`} className="px-space-md py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-all shadow-md flex items-center justify-center gap-2 group-hover:scale-[1.01]">
-                  <span>Choisir mon siège</span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </Link>
-              </div>
-            </div>
-            )}
-
-            {/* ---- Departure 3: 14:00 VIP Soirée (Low Seats Warning) ---- */}
-            {showD3 && (
-            <div className="bg-surface-container-lowest rounded-xl p-space-md md:p-space-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group" style={{ order: getOrder(3) }}>
-              <div className="flex items-center justify-between pb-space-sm mb-space-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
-                    <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-title-md text-title-md font-bold text-on-surface">Confort Lines VIP Soirée</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-[12px]">verified</span> Partenaire Officiel
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Gare Étoile Rouge • Arrivée sécurisée en début de soirée</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary/10 text-secondary">
-                  <span className="material-symbols-outlined text-[16px]">airline_seat_recline_normal</span>
-                  <span className="font-label-md text-label-md font-bold">5 places restantes</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md items-center my-space-md py-space-sm bg-surface-container-low/40 px-space-md rounded-xl">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">14:00</span>
-                    <span className="font-label-sm text-[10px] uppercase font-bold text-on-tertiary-fixed-variant bg-tertiary-fixed px-1.5 py-0.5 rounded">Après-midi</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{from}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Gare Étoile Rouge
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant font-medium mb-1">{currentRoute.duration} de trajet</span>
-                  <div className="w-full flex items-center gap-1 text-outline">
-                    <span className="w-2 h-2 rounded-full bg-primary"></span>
-                    <div className="flex-1 h-[2px] bg-outline-variant relative">
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-secondary">
-                        <span className="material-symbols-outlined text-[16px]">directions_bus</span>
-                      </span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  </div>
-                  <span className="font-label-sm text-[10px] text-secondary font-semibold mt-1">Direct via Savè</span>
-                </div>
-                <div className="flex flex-col md:text-right">
-                  <div className="flex items-center md:justify-end gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">20:30</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{to}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Terminus {to} Dépôt
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-space-sm flex-wrap py-2">
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">ac_unit</span> Climatisation
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">tv</span> Écran Vidéo HD
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-secondary">airline_seat_recline_extra</span> Sièges Cuir VIP
-                </span>
-              </div>
-
-              <div className="pt-space-md mt-space-sm flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
-                <div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[28px] leading-8 font-bold text-on-surface">{formatPrice(d3_price)}</span>
-                    <span className="font-body-md text-body-md font-semibold text-on-surface-variant">FCFA</span>
-                  </div>
-                </div>
-                <Link href={`/${locale}/reservation/3?${bookingParams}`} className="px-space-md py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-all shadow-md flex items-center justify-center gap-2 group-hover:scale-[1.01]">
-                  <span>Choisir mon siège</span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </Link>
-              </div>
-            </div>
-            )}
-
-            {/* ---- Departure 4: 08:00 Baobab Express ---- */}
-            {showD4 && (
-            <div className="bg-surface-container-lowest rounded-xl p-space-md md:p-space-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group" style={{ order: getOrder(4) }}>
-              <div className="flex items-center justify-between pb-space-sm mb-space-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#f59e0b] flex items-center justify-center text-white">
-                    <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-title-md text-title-md font-bold text-on-surface">Baobab Express</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-[12px]">verified</span> Partenaire Officiel
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Ligne Express Régionale</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">
-                  <span className="material-symbols-outlined text-[16px]">airline_seat_recline_normal</span>
-                  <span className="font-label-md text-label-md font-bold">{d4_seats} places restantes</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md items-center my-space-md py-space-sm bg-surface-container-low/40 px-space-md rounded-xl">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">08:00</span>
-                    <span className="font-label-sm text-[10px] uppercase font-bold text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">Matin</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{from}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Gare Principale
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant font-medium mb-1">{currentRoute.duration} de trajet</span>
-                  <div className="w-full flex items-center gap-1 text-outline">
-                    <span className="w-2 h-2 rounded-full bg-[#f59e0b]"></span>
-                    <div className="flex-1 h-[2px] bg-outline-variant relative">
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-secondary">
-                        <span className="material-symbols-outlined text-[16px]">directions_bus</span>
-                      </span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  </div>
-                  <span className="font-label-sm text-[10px] text-secondary font-semibold mt-1">Direct sans escale longue</span>
-                </div>
-                <div className="flex flex-col md:text-right">
-                  <div className="flex items-center md:justify-end gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">14:30</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{to}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Agence Locale
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-space-sm flex-wrap py-2">
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-[#f59e0b]">ac_unit</span> Climatisation
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-[#f59e0b]">bolt</span> Prises de courant
-                </span>
-              </div>
-
-              <div className="pt-space-md mt-space-sm flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
-                <div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[28px] leading-8 font-bold text-on-surface">{formatPrice(d4_price)}</span>
-                    <span className="font-body-md text-body-md font-semibold text-on-surface-variant">FCFA</span>
-                  </div>
-                </div>
-                <Link href={`/${locale}/reservation/4?${bookingParams}`} className="px-space-md py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-all shadow-md flex items-center justify-center gap-2 group-hover:scale-[1.01]">
-                  <span>Choisir mon siège</span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </Link>
-              </div>
-            </div>
-            )}
-
-            {/* ---- Departure 5: 11:00 ATT Transports ---- */}
-            {showD5 && (
-            <div className="bg-surface-container-lowest rounded-xl p-space-md md:p-space-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group" style={{ order: getOrder(5) }}>
-              <div className="flex items-center justify-between pb-space-sm mb-space-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#3b82f6] flex items-center justify-center text-white">
-                    <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-title-md text-title-md font-bold text-on-surface">ATT Transports VIP</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-[12px]">verified</span> Partenaire Officiel
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Trajet Inter-urbain Confort</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary/10 text-secondary">
-                  <span className="material-symbols-outlined text-[16px]">airline_seat_recline_normal</span>
-                  <span className="font-label-md text-label-md font-bold">{d5_seats} places restantes</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md items-center my-space-md py-space-sm bg-surface-container-low/40 px-space-md rounded-xl">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">11:00</span>
-                    <span className="font-label-sm text-[10px] uppercase font-bold text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">Matin</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{from}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Terminus Principal
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant font-medium mb-1">{currentRoute.duration} de trajet</span>
-                  <div className="w-full flex items-center gap-1 text-outline">
-                    <span className="w-2 h-2 rounded-full bg-[#3b82f6]"></span>
-                    <div className="flex-1 h-[2px] bg-outline-variant relative">
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-secondary">
-                        <span className="material-symbols-outlined text-[16px]">directions_bus</span>
-                      </span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  </div>
-                  <span className="font-label-sm text-[10px] text-secondary font-semibold mt-1">Direct Rapide</span>
-                </div>
-                <div className="flex flex-col md:text-right">
-                  <div className="flex items-center md:justify-end gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">17:30</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{to}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Gare d'Arrivée
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-space-sm flex-wrap py-2">
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-[#3b82f6]">ac_unit</span> Climatisation VIP
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-[#3b82f6]">airline_seat_recline_extra</span> Sièges Ajustables
-                </span>
-              </div>
-
-              <div className="pt-space-md mt-space-sm flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
-                <div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[28px] leading-8 font-bold text-on-surface">{formatPrice(d5_price)}</span>
-                    <span className="font-body-md text-body-md font-semibold text-on-surface-variant">FCFA</span>
-                  </div>
-                </div>
-                <Link href={`/${locale}/reservation/5?${bookingParams}`} className="px-space-md py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-all shadow-md flex items-center justify-center gap-2 group-hover:scale-[1.01]">
-                  <span>Choisir mon siège</span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </Link>
-              </div>
-            </div>
-            )}
-
-            {/* ---- Departure 6: 15:30 STM Voyageur ---- */}
-            {showD6 && (
-            <div className="bg-surface-container-lowest rounded-xl p-space-md md:p-space-lg shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group" style={{ order: getOrder(6) }}>
-              <div className="flex items-center justify-between pb-space-sm mb-space-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#8b5cf6] flex items-center justify-center text-white">
-                    <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-title-md text-title-md font-bold text-on-surface">STM Voyageur</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold uppercase tracking-wider">
-                        <span className="material-symbols-outlined text-[12px]">verified</span> Partenaire Officiel
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">Classique Économique</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">
-                  <span className="material-symbols-outlined text-[16px]">airline_seat_recline_normal</span>
-                  <span className="font-label-md text-label-md font-bold">{d6_seats} places restantes</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md items-center my-space-md py-space-sm bg-surface-container-low/40 px-space-md rounded-xl">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">15:30</span>
-                    <span className="font-label-sm text-[10px] uppercase font-bold text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded">Après-midi</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{from}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Gare Routière
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center text-center">
-                  <span className="font-label-sm text-label-sm text-on-surface-variant font-medium mb-1">{currentRoute.duration} de trajet</span>
-                  <div className="w-full flex items-center gap-1 text-outline">
-                    <span className="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
-                    <div className="flex-1 h-[2px] bg-outline-variant relative">
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-secondary">
-                        <span className="material-symbols-outlined text-[16px]">directions_bus</span>
-                      </span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  </div>
-                  <span className="font-label-sm text-[10px] text-secondary font-semibold mt-1">Arrêts réguliers</span>
-                </div>
-                <div className="flex flex-col md:text-right">
-                  <div className="flex items-center md:justify-end gap-2">
-                    <span className="font-headline-md text-headline-md font-bold text-on-surface">22:00</span>
-                  </div>
-                  <span className="font-body-md text-body-md font-semibold text-on-surface mt-1">{to}</span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1">
-                    <span className="material-symbols-outlined text-[14px]">pin_drop</span> Gare de Destination
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-space-sm flex-wrap py-2">
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-[#8b5cf6]">wind_power</span> Ventilation
-                </span>
-                <span className="inline-flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
-                  <span className="material-symbols-outlined text-[16px] text-[#8b5cf6]">tv</span> TV à Bord
-                </span>
-              </div>
-
-              <div className="pt-space-md mt-space-sm flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
-                <div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[28px] leading-8 font-bold text-on-surface">{formatPrice(d6_price)}</span>
-                    <span className="font-body-md text-body-md font-semibold text-on-surface-variant">FCFA</span>
-                  </div>
-                </div>
-                <Link href={`/${locale}/reservation/6?${bookingParams}`} className="px-space-md py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-all shadow-md flex items-center justify-center gap-2 group-hover:scale-[1.01]">
-                  <span>Choisir mon siège</span>
-                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </Link>
-              </div>
-            </div>
-            )}
+              );
+            })}
 
           </div>
 

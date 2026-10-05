@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { useSearchStore } from '@/stores/searchStore';
 
 const CITIES = [
   { name: 'Cotonou', station: 'Gare Étoile Rouge' },
@@ -11,6 +12,7 @@ const CITIES = [
   { name: 'Natitingou', station: 'Agence Principale' },
   { name: 'Djougou', station: 'Gare Centrale' },
   { name: 'Tanguiéta', station: 'Agence Partenaires' },
+  { name: 'Porto-Novo', station: 'Gare Routière' },
 ];
 
 const WEEKDAYS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
@@ -20,14 +22,15 @@ export const SearchForm = () => {
   const router = useRouter();
   const locale = useLocale();
   const formRef = useRef<HTMLDivElement>(null);
+  const { from, to, date, passengers: storePassengers, setSearch } = useSearchStore();
 
   const [tripType, setTripType] = useState<'oneway' | 'roundtrip'>('oneway');
   const [activeDropdown, setActiveDropdown] = useState<'from' | 'to' | 'date' | 'passengers' | null>(null);
   
-  const [fromCity, setFromCity] = useState(CITIES[0]);
-  const [toCity, setToCity] = useState(CITIES[1]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [passengers, setPassengers] = useState(1);
+  const [fromCity, setFromCity] = useState(CITIES.find(c => c.name.toLowerCase() === from.toLowerCase()) || CITIES[0]);
+  const [toCity, setToCity] = useState(CITIES.find(c => c.name.toLowerCase() === to.toLowerCase()) || CITIES[1]);
+  const [selectedDate, setSelectedDate] = useState<Date>(date ? new Date(date) : new Date());
+  const [passengers, setPassengers] = useState(storePassengers || 1);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -48,6 +51,7 @@ export const SearchForm = () => {
 
   const handleSearch = () => {
     const dateStr = selectedDate.toISOString().split('T')[0];
+    setSearch(fromCity.name, toCity.name, dateStr, passengers);
     router.push(`/${locale}/resultats?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
   };
 
