@@ -157,7 +157,7 @@ export default function ResultsPage() {
             <div className="flex items-center gap-space-sm w-full md:w-auto justify-between md:justify-end">
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/50 text-on-secondary-container">
                 <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-                <span className="font-label-sm text-label-sm font-semibold">3 Départs Directs Garantis</span>
+                <span className="font-label-sm text-label-sm font-semibold">{trips.length} Départ{trips.length > 1 ? 's' : ''} Direct{trips.length > 1 ? 's' : ''} Garanti{trips.length > 1 ? 's' : ''}</span>
               </div>
               <button
                 onClick={() => setShowSearchDrawer(!showSearchDrawer)}
@@ -252,7 +252,7 @@ export default function ResultsPage() {
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">À partir de <span className="font-bold text-on-surface">{formatPrice(basePrice)} FCFA</span></span>
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                <span className="font-label-sm text-label-sm text-secondary font-semibold">3 bus dispo</span>
+                <span className="font-label-sm text-label-sm text-secondary font-semibold">{trips.length} bus dispo</span>
               </div>
             </button>
 
@@ -263,7 +263,7 @@ export default function ResultsPage() {
             >
               <div className="flex items-center justify-between mb-0.5">
                 <span className={`font-label-sm text-label-sm ${isSelectedDate(tomorrow) ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>Demain • {formatShortDate(tomorrow)}</span>
-                <span className="font-label-sm text-[10px] px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold">4 départs</span>
+                <span className="font-label-sm text-[10px] px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold">{Math.max(trips.length + 1, 3)} départs</span>
               </div>
               <div className="font-label-md text-label-md text-on-surface font-semibold">Dès {formatPrice(basePrice)} FCFA</div>
             </button>
