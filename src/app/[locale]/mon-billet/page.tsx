@@ -128,7 +128,7 @@ export default function MonBilletPage() {
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981]/30 outline-none transition-all"
               />
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap">
               {([['all', 'Tous'], ['confirmed', 'Confirmés'], ['completed', 'Effectués'], ['cancelled', 'Annulés']] as const).map(([key, label]) => (
                 <button
                   key={key}

@@ -699,11 +699,11 @@ export default function ProfilPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
                     <button
                       type="submit"
                       disabled={isSaving}
-                      className="px-6 py-2.5 rounded-xl bg-[#0F172A] text-white text-[13px] font-bold hover:bg-[#1E293B] transition-all flex items-center gap-2 shadow-sm disabled:opacity-60"
+                      className="px-6 py-2.5 rounded-xl bg-[#0F172A] text-white text-[13px] font-bold hover:bg-[#1E293B] transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
                     >
                       {isSaving ? (
                         <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
@@ -716,7 +716,7 @@ export default function ProfilPage() {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="text-[12px] text-[#DC2626] font-semibold hover:underline flex items-center gap-1"
+                      className="text-[12px] text-[#DC2626] font-semibold hover:underline flex items-center justify-center gap-1 py-1"
                     >
                       <span className="material-symbols-outlined text-[14px]">logout</span>
                       Déconnexion

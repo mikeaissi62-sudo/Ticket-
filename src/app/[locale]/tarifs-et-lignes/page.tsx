@@ -161,7 +161,7 @@ export default function TarifsEtLignesPage() {
               </div>
               <div>
                 <label className="text-[11px] text-[#94A3B8] font-semibold uppercase tracking-wider block mb-1.5">Trier par</label>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 flex-wrap">
                   {([['price', 'Prix'], ['departures', 'Fréquence'], ['duration', 'Durée']] as const).map(([key, label]) => (
                     <button
                       key={key}
