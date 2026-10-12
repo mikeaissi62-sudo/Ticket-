@@ -105,16 +105,8 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [otpCountdown]);
 
-  // "Passer cette étape" -> Set guest cookie and go to Home (Accueil)
-  const handleSkipToHome = () => {
-    document.cookie = 'tp_guest=1; path=/; max-age=' + (30 * 24 * 60 * 60);
-    router.push(`/${locale}`);
-  };
-
   // Redirection vers l'Accueil après connexion ou inscription
   const handleAuthSuccess = () => {
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
-    document.cookie = `tp_guest=1; path=/; max-age=${maxAge}`;
     try {
       localStorage.setItem('tp_remember_me', rememberMe ? '1' : '0');
     } catch {}
@@ -412,18 +404,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Quick Skip button on desktop left side */}
-          <div className="pt-4 border-t border-[#CBD5E1]/60">
-            <button
-              onClick={handleSkipToHome}
-              className="text-[13px] text-[#64748B] hover:text-[#0F172A] font-bold flex items-center gap-1.5 group transition-colors"
-            >
-              <span>Continuer sans se connecter (Mode Invité)</span>
-              <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
-            </button>
-          </div>
+
         </div>
 
         {/* Right Side: Auth Card */}
@@ -440,14 +421,7 @@ export default function LoginPage() {
                   <span className="font-bold text-[14px] tracking-tight">Ticket+</span>
                 </div>
 
-                {/* Prominent "Passer cette étape" button */}
-                <button
-                  onClick={handleSkipToHome}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[12px] font-bold transition-all flex items-center gap-1"
-                >
-                  <span>Passer cette étape</span>
-                  <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-                </button>
+
               </div>
 
               <h2 className="text-[20px] sm:text-[22px] font-extrabold tracking-tight">
@@ -912,17 +886,7 @@ export default function LoginPage() {
                 Tester immédiatement (Compte Démo Voyageur)
               </button>
 
-              {/* Mobile "Passer cette étape" footer button */}
-              <div className="mt-6 pt-4 border-t border-[#E2E8F0] text-center lg:hidden">
-                <button
-                  type="button"
-                  onClick={handleSkipToHome}
-                  className="w-full py-2.5 rounded-xl bg-transparent text-[#64748B] hover:text-[#0F172A] text-[13px] font-bold transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <span>Passer et continuer vers l&apos;accueil</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </button>
-              </div>
+
 
             </div>
           </div>

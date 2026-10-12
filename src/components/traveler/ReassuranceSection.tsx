@@ -1,8 +1,11 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
+import { useLocale } from 'next-intl';
 
 export const ReassuranceSection = () => {
+  const locale = useLocale();
   return (
     <>
       {/* 3 Columns Reassurance */}
@@ -60,14 +63,13 @@ export const ReassuranceSection = () => {
                 <p className="text-[12px] text-[#64748B]">Présentez-vous 30 minutes avant le départ à la Gare Étoile Rouge ou réservez en ligne.</p>
               </div>
             </div>
-            <a
-              href="https://wa.me/2290154658907"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 px-5 py-2.5 rounded-xl border border-[#10B981] text-[#059669] text-[13px] font-semibold hover:bg-[#ECFDF5] transition-colors"
+            <Link
+              href={`/${locale}/login`}
+              className="shrink-0 px-5 py-2.5 rounded-xl bg-primary text-on-primary text-[13px] font-semibold hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm flex items-center gap-1.5"
             >
-              Contacter la gare
-            </a>
+              <span>Réserver en ligne</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </Link>
           </div>
         </div>
       </section>

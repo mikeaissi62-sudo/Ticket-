@@ -28,23 +28,22 @@ export async function middleware(request: NextRequest) {
     (c) => c.name.includes('sb-') || c.name.includes('supabase')
   );
 
-  // Check if user clicked "Passer cette étape" (Guest mode)
-  const isGuest = request.cookies.has('tp_guest');
-
   // Extract locale (default 'fr')
   const localeMatch = pathname.match(/^\/(fr|en)/);
   const locale = localeMatch ? localeMatch[1] : 'fr';
 
-  // If already authenticated and trying to access /login, redirect to profile
+  // If already authenticated and trying to access /login, redirect to home
   if (isLoginPage && hasAuthCookie) {
     const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/profil`;
+    url.pathname = `/${locale}`;
     return NextResponse.redirect(url);
   }
 
-  // GATEKEEPER: If first time visitor (not logged in, not marked as guest, not on login page, not on public asset)
-  // redirect them to the login & onboarding page first
-  if (!hasAuthCookie && !isGuest && !isLoginPage) {
+  const isHomePage = basePath === '/' || basePath === '';
+
+  // GATEKEEPER: Unauthenticated users can view the Home page (Accueil).
+  // Any action or attempt to access other pages redirects straight to /login
+  if (!hasAuthCookie && !isLoginPage && !isHomePage) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     return NextResponse.redirect(url);

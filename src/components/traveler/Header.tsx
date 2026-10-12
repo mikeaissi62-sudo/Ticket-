@@ -74,17 +74,6 @@ export const Header = () => {
               Accueil
             </Link>
             <Link 
-              href={`/${locale}/la-solution`} 
-              prefetch={true}
-              className={`px-3 py-2 transition-all rounded-xl text-[13px] xl:text-[14px] font-semibold active:scale-95 duration-75 ${
-                isActive(`/${locale}/la-solution`) 
-                  ? 'bg-primary/10 text-primary font-bold' 
-                  : 'text-[#475569] hover:bg-surface-container hover:text-on-surface'
-              }`}
-            >
-              La Solution
-            </Link>
-            <Link 
               href={`/${locale}/compagnies`} 
               prefetch={true}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] xl:text-[14px] font-semibold transition-all active:scale-95 duration-75 ${
@@ -231,19 +220,6 @@ export const Header = () => {
               >
                 <span className="material-symbols-outlined text-[20px]">home</span>
                 Accueil
-              </Link>
-              <Link 
-                href={`/${locale}/la-solution`} 
-                prefetch={true}
-                onClick={() => setMobileMenuOpen(false)} 
-                className={`px-4 py-3 rounded-xl text-[14px] font-semibold active:scale-98 transition-all duration-75 flex items-center gap-3 ${
-                  isActive(`/${locale}/la-solution`) 
-                    ? 'bg-primary/10 text-primary font-bold' 
-                    : 'text-[#475569] hover:bg-surface-container'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">lightbulb</span>
-                La Solution
               </Link>
               <Link 
                 href={`/${locale}/compagnies`} 
