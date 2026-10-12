@@ -285,6 +285,29 @@ export interface Database {
         Insert: NotificationInsert;
         Update: Partial<NotificationInsert>;
       };
+      phone_otps: {
+        Row: {
+          phone: string;
+          otp_code: string;
+          expires_at: string;
+          attempts: number;
+          created_at: string;
+        };
+        Insert: {
+          phone: string;
+          otp_code: string;
+          expires_at?: string;
+          attempts?: number;
+          created_at?: string;
+        };
+        Update: {
+          phone?: string;
+          otp_code?: string;
+          expires_at?: string;
+          attempts?: number;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
