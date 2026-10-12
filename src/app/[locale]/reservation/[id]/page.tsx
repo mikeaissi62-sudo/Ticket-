@@ -26,7 +26,8 @@ export default function BookingPage() {
 
   React.useEffect(() => {
     if (selectedTrip) {
-      const disabledSeats = selectedTrip.disabledSeats.map(s => s.toString().padStart(2, '0'));
+      const disabledList = Array.isArray(selectedTrip.disabledSeats) ? selectedTrip.disabledSeats : [2, 5, 12, 19, 23];
+      const disabledSeats = disabledList.map((s: any) => s.toString().padStart(2, '0'));
       if (disabledSeats.includes(selectedSeat)) {
         const allSeats = Array.from({length: 32}, (_, i) => (i + 1).toString().padStart(2, '0'));
         const firstFree = allSeats.find(s => !disabledSeats.includes(s));
@@ -39,16 +40,20 @@ export default function BookingPage() {
     return <div className="p-8 text-center text-on-surface">Redirection vers les résultats...</div>;
   }
 
-  const company = COMPANIES.find(c => c.id === selectedTrip.companyId) || COMPANIES[0];
+  const company = COMPANIES.find(c => c.id === selectedTrip.companyId) || {
+    name: selectedTrip.companyName || 'Compagnie Partenaire',
+    subtitle: selectedTrip.companySubtitle || 'Transport de voyageurs',
+  };
   const companyName = company.name;
   const carName = `Autocar ${companyName}`;
   const bannerImg = "/images/bus-banner.jpg";
   
-  const disabledSeats = selectedTrip.disabledSeats.map(s => s.toString().padStart(2, '0'));
+  const disabledList = Array.isArray(selectedTrip.disabledSeats) ? selectedTrip.disabledSeats : [2, 5, 12, 19, 23];
+  const disabledSeats = disabledList.map((s: any) => s.toString().padStart(2, '0'));
 
-  const from = STATIONS.find(s => s.id === selectedTrip.departureStationId)?.city || 'Cotonou';
-  const to = STATIONS.find(s => s.id === selectedTrip.arrivalStationId)?.city || 'Parakou';
-  const dateParam = selectedTrip.date;
+  const from = selectedTrip.from || STATIONS.find(s => s.id === selectedTrip.departureStationId)?.city || 'Cotonou';
+  const to = selectedTrip.to || STATIONS.find(s => s.id === selectedTrip.arrivalStationId)?.city || 'Parakou';
+  const dateParam = selectedTrip.date || new Date().toISOString().split('T')[0];
 
   const basePrice = selectedTrip.price;
   const extraLuggagePrice = extraLuggage ? 1000 : 0;

@@ -456,6 +456,8 @@ export default function ResultsPage() {
                         selectTrip({
                           id: trip.id,
                           companyId: trip.companyId,
+                          companyName: trip.companyName || company.name,
+                          companySubtitle: trip.companySubtitle || company.subtitle,
                           departureTime: trip.departureTime,
                           arrivalTime: trip.arrivalTime,
                           duration: trip.duration,
@@ -463,6 +465,10 @@ export default function ResultsPage() {
                           departureStationId: trip.departureStationId,
                           arrivalStationId: trip.arrivalStationId,
                           availableSeats: trip.availableSeats,
+                          disabledSeats: trip.disabledSeats || [2, 5, 12, 19, 23],
+                          from: from,
+                          to: to,
+                          date: dateParam,
                           features: trip.features || [],
                         });
                         router.push(`/${locale}/reservation/${trip.id}`);
