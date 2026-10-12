@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       user_metadata: {
         first_name: firstName,
         last_name: lastName,
-        phone,
+        phone: phone || '',
       },
     });
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     await (admin.from('users') as any).upsert({
       id: newUser.user.id,
       email,
-      phone,
+      phone: phone || '',
       first_name: firstName,
       last_name: lastName,
       role: 'traveler',

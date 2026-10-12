@@ -27,7 +27,7 @@ CREATE TYPE bus_type AS ENUM ('VIP', 'Confort', 'Standard');
 CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
-  phone TEXT NOT NULL,
+  phone TEXT NOT NULL DEFAULT '',
   first_name TEXT NOT NULL DEFAULT '',
   last_name TEXT NOT NULL DEFAULT '',
   role user_role NOT NULL DEFAULT 'traveler',

@@ -64,11 +64,12 @@ export async function POST(request: NextRequest) {
 
     if (isValidOtp) {
       // OTP valide !
-      // Chercher un utilisateur existant avec ce numéro de téléphone
+      // Chercher un utilisateur existant avec ce numéro de téléphone (format international ou local)
+      const localPhone = phone.replace(/^\+\d{1,4}/, '');
       const { data: existingProfile } = await (admin
         .from('users') as any)
-        .select('id, email, first_name, last_name')
-        .eq('phone', phone.replace('+229', ''))
+        .select('id, email, first_name, last_name, phone')
+        .or(`phone.eq.${phone},phone.eq.${localPhone}`)
         .maybeSingle();
 
       if (existingProfile) {
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
       await (admin.from('users') as any).upsert({
         id: newUser.user.id,
         email: syntheticEmail,
-        phone: phone.replace('+229', ''),
+        phone: phone,
         first_name: '',
         last_name: '',
         role: 'traveler',
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
           await (admin.from('users') as any).upsert({
             id: data.user.id,
             email: data.user.email || '',
-            phone: phone.replace('+229', ''),
+            phone: phone,
             first_name: '',
             last_name: '',
             role: 'traveler',

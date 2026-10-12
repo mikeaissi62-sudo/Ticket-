@@ -115,6 +115,9 @@ export default function LoginPage() {
   const handleAuthSuccess = () => {
     const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
     document.cookie = `tp_guest=1; path=/; max-age=${maxAge}`;
+    try {
+      localStorage.setItem('tp_remember_me', rememberMe ? '1' : '0');
+    } catch {}
     router.replace(`/${locale}`);
   };
 
