@@ -18,6 +18,7 @@ const NAV_ITEMS: SidebarItem[] = [
   { name: 'Analytics & Trafic', href: '/admin/analytics', icon: 'analytics' },
   { name: 'Revenus & Commissions', href: '/admin/revenue', icon: 'payments' },
   { name: 'Utilisateurs & Rôles', href: '/admin/users', icon: 'group' },
+  { name: 'Configuration', href: '/admin/settings', icon: 'settings' },
 ];
 
 export const AdminSidebar: React.FC = () => {

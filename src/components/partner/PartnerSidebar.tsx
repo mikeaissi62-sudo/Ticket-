@@ -23,9 +23,10 @@ const NAV_SECTIONS = [
     ] as SidebarItem[],
   },
   {
-    label: 'Finance',
+    label: 'Finance & Config',
     items: [
       { name: 'Revenus & Stats', href: '/partner/revenue', icon: 'trending_up' },
+      { name: 'Paramètres', href: '/partner/settings', icon: 'settings' },
     ] as SidebarItem[],
   },
 ];
