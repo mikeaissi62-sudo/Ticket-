@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 // ── Types ──
 interface BookingItem {
@@ -20,15 +21,9 @@ interface BookingItem {
   createdAt: string;
 }
 
-// ── Données mock ──
-const BOOKINGS: BookingItem[] = [
-  { id: '1', reference: 'TK-A8F3K2', passengerName: 'Kévin Adjovi', passengerPhone: '+229 97 12 34 56', route: 'Cotonou → Parakou', tripDate: '12 Oct 2026', departureTime: '06:30', seatNumber: 'A3', busType: 'VIP', amount: '8 500 XOF', hasBaggage: true, isFlexible: false, status: 'confirmed', createdAt: '11 Oct, 22:45' },
-  { id: '2', reference: 'TK-B1L9M4', passengerName: 'Fatou Adjaké', passengerPhone: '+229 96 78 90 12', route: 'Cotonou → Porto-Novo', tripDate: '12 Oct 2026', departureTime: '08:00', seatNumber: 'B7', busType: 'Standard', amount: '2 500 XOF', hasBaggage: false, isFlexible: true, status: 'confirmed', createdAt: '12 Oct, 06:15' },
-  { id: '3', reference: 'TK-C3R7P6', passengerName: 'Marc Houngbo', passengerPhone: '+229 95 45 67 89', route: 'Bohicon → Cotonou', tripDate: '12 Oct 2026', departureTime: '07:00', seatNumber: 'C2', busType: 'Confort', amount: '5 000 XOF', hasBaggage: true, isFlexible: false, status: 'pending', createdAt: '12 Oct, 05:30' },
-  { id: '4', reference: 'TK-D5T2N8', passengerName: 'Ines Kpossou', passengerPhone: '+229 67 23 45 67', route: 'Cotonou → Abomey', tripDate: '13 Oct 2026', departureTime: '09:30', seatNumber: 'A1', busType: 'Standard', amount: '4 000 XOF', hasBaggage: false, isFlexible: false, status: 'confirmed', createdAt: '12 Oct, 14:20' },
-  { id: '5', reference: 'TK-E9W4Q1', passengerName: 'Paul Atchadé', passengerPhone: '+229 91 89 01 23', route: 'Parakou → Natitingou', tripDate: '13 Oct 2026', departureTime: '06:00', seatNumber: 'B4', busType: 'VIP', amount: '6 500 XOF', hasBaggage: true, isFlexible: true, status: 'cancelled', createdAt: '11 Oct, 18:10' },
-  { id: '6', reference: 'TK-F2X6R3', passengerName: 'Amina Saka', passengerPhone: '+229 98 56 78 90', route: 'Cotonou → Ouidah', tripDate: '12 Oct 2026', departureTime: '10:00', seatNumber: 'C5', busType: 'Confort', amount: '1 500 XOF', hasBaggage: false, isFlexible: false, status: 'completed', createdAt: '11 Oct, 20:00' },
-  { id: '7', reference: 'TK-G7Y1S5', passengerName: 'David Mehou', passengerPhone: '+229 94 34 56 78', route: 'Cotonou → Parakou', tripDate: '14 Oct 2026', departureTime: '06:30', seatNumber: 'A8', busType: 'VIP', amount: '8 500 XOF', hasBaggage: true, isFlexible: true, status: 'pending', createdAt: '12 Oct, 16:45' },
+const DEFAULT_BOOKINGS: BookingItem[] = [
+  { id: '1', reference: 'TK-A8F3K2', passengerName: 'Kévin Adjovi', passengerPhone: '+229 01 64 28 90 00', route: 'Cotonou → Parakou', tripDate: '12 Oct 2026', departureTime: '06:30', seatNumber: '12A', busType: 'VIP', amount: '8 500 XOF', hasBaggage: true, isFlexible: false, status: 'confirmed', createdAt: '12 Oct, 08:30' },
+  { id: '2', reference: 'TK-B1L9M4', passengerName: 'Fatou Adjaké', passengerPhone: '+229 01 65 11 22 33', route: 'Cotonou → Porto-Novo', tripDate: '12 Oct 2026', departureTime: '08:00', seatNumber: '14B', busType: 'Standard', amount: '8 500 XOF', hasBaggage: false, isFlexible: true, status: 'confirmed', createdAt: '12 Oct, 09:15' },
 ];
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -45,26 +40,120 @@ const TYPE_BADGE = {
 };
 
 export default function BookingsPage() {
+  const [bookings, setBookings] = useState<BookingItem[]>(DEFAULT_BOOKINGS);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
 
-  const filteredBookings = BOOKINGS.filter((b) => {
+  const supabase = createClient();
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
+  async function loadBookings() {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          booking_reference,
+          passenger_first_name,
+          passenger_last_name,
+          passenger_phone,
+          status,
+          total_price,
+          has_baggage,
+          is_flexible,
+          created_at,
+          trips (
+            trip_date,
+            departure_time,
+            routes (
+              name
+            ),
+            buses (
+              bus_type
+            )
+          ),
+          seats (
+            seat_number
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching bookings:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const mapped: BookingItem[] = data.map((b: any) => {
+          const trip = b.trips;
+          const route = trip?.routes?.name || 'Cotonou → Parakou';
+          const busType = trip?.buses?.bus_type || 'Confort';
+          const seat = b.seats?.seat_number || 'Libre';
+
+          return {
+            id: b.id,
+            reference: b.booking_reference,
+            passengerName: `${b.passenger_first_name} ${b.passenger_last_name}`.trim(),
+            passengerPhone: b.passenger_phone,
+            route,
+            tripDate: trip?.trip_date || 'Aujourd\'hui',
+            departureTime: trip?.departure_time?.slice(0, 5) || '07:00',
+            seatNumber: seat,
+            busType,
+            amount: `${Number(b.total_price || 0).toLocaleString('fr-FR')} XOF`,
+            hasBaggage: !!b.has_baggage,
+            isFlexible: !!b.is_flexible,
+            status: b.status || 'confirmed',
+            createdAt: new Date(b.created_at).toLocaleDateString('fr-FR', {
+              day: '2-digit',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          };
+        });
+        setBookings(mapped);
+      }
+    } catch (err) {
+      console.error('Failed to load bookings from Supabase:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCheckIn(bookingId: string) {
+    try {
+      await supabase
+        .from('bookings')
+        .update({ status: 'completed' })
+        .eq('id', bookingId);
+
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, status: 'completed' } : b))
+      );
+      if (selectedBooking?.id === bookingId) {
+        setSelectedBooking((prev) => (prev ? { ...prev, status: 'completed' } : null));
+      }
+    } catch (err: any) {
+      alert(`Erreur: ${err.message}`);
+    }
+  }
+
+  const filteredBookings = bookings.filter((b) => {
     const matchStatus = statusFilter === 'all' || b.status === statusFilter;
-    const matchSearch = searchQuery === '' || 
+    const matchSearch =
+      searchQuery === '' ||
       b.reference.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.passengerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.route.toLowerCase().includes(searchQuery.toLowerCase());
     return matchStatus && matchSearch;
   });
-
-  const stats = {
-    total: BOOKINGS.length,
-    confirmed: BOOKINGS.filter((b) => b.status === 'confirmed').length,
-    pending: BOOKINGS.filter((b) => b.status === 'pending').length,
-    revenue: BOOKINGS.filter((b) => b.status === 'confirmed' || b.status === 'completed')
-      .reduce((sum, b) => sum + parseInt(b.amount.replace(/\D/g, '')), 0),
-  };
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
@@ -73,149 +162,131 @@ export default function BookingsPage() {
         <div>
           <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-teal-500 text-[22px]">confirmation_number</span>
-            Réservations
+            Réservations & Embarquement
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">Suivez les réservations en temps réel</p>
+          <p className="text-xs text-slate-400 mt-0.5">Suivez les billets et validez les montées en gare</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Search */}
-          <div className="relative">
-            <span className="material-symbols-outlined text-[18px] text-slate-400 absolute left-3 top-1/2 -translate-y-1/2">search</span>
-            <input
-              type="text"
-              placeholder="Réf, passager, trajet..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs w-56 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none"
-            />
-          </div>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200 transition-all">
-            <span className="material-symbols-outlined text-[16px]">download</span>
-            Exporter
+          <button
+            onClick={loadBookings}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[16px]">refresh</span>
+            Actualiser
           </button>
         </div>
       </header>
 
       <main className="flex-1 p-6 space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/60 shadow-sm flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-teal-500 text-[20px]">confirmation_number</span>
-            </div>
-            <div>
-              <div className="text-xl font-extrabold text-slate-900">{stats.total}</div>
-              <div className="text-[11px] text-slate-400 font-medium">Total réservations</div>
-            </div>
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div className="relative flex-1 max-w-md">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+              search
+            </span>
+            <input
+              type="text"
+              placeholder="Rechercher par référence, nom ou trajet..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none bg-white transition-all"
+            />
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/60 shadow-sm flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-emerald-500 text-[20px]">verified</span>
-            </div>
-            <div>
-              <div className="text-xl font-extrabold text-slate-900">{stats.confirmed}</div>
-              <div className="text-[11px] text-slate-400 font-medium">Confirmées</div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/60 shadow-sm flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-amber-500 text-[20px]">hourglass_top</span>
-            </div>
-            <div>
-              <div className="text-xl font-extrabold text-slate-900">{stats.pending}</div>
-              <div className="text-[11px] text-slate-400 font-medium">En attente</div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/60 shadow-sm flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-cyan-500 text-[20px]">payments</span>
-            </div>
-            <div>
-              <div className="text-xl font-extrabold text-slate-900">{stats.revenue.toLocaleString()} <span className="text-xs font-medium text-slate-400">XOF</span></div>
-              <div className="text-[11px] text-slate-400 font-medium">Revenus associés</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2">
-          {(['all', 'confirmed', 'pending', 'cancelled', 'completed'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                statusFilter === s
-                  ? 'bg-teal-500 text-white shadow-sm'
-                  : 'bg-white text-slate-500 border border-slate-200 hover:border-teal-300'
-              }`}
-            >
-              {s === 'all' ? 'Toutes' : STATUS_MAP[s].label}
-            </button>
-          ))}
-          <span className="text-xs text-slate-400 ml-2">{filteredBookings.length} résultat(s)</span>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            {(['all', 'confirmed', 'pending', 'completed', 'cancelled'] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  statusFilter === status
+                    ? 'bg-teal-500 text-white shadow-sm shadow-teal-500/20'
+                    : 'bg-white text-slate-500 border border-slate-200/80 hover:bg-slate-50'
+                }`}
+              >
+                {status === 'all' ? 'Toutes' : STATUS_MAP[status]?.label || status}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Bookings Table */}
         <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50/80">
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Réf.</th>
-                  <th className="text-left px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Passager</th>
-                  <th className="text-left px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trajet</th>
-                  <th className="text-left px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date & Heure</th>
-                  <th className="text-center px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Siège</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Montant</th>
-                  <th className="text-center px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Statut</th>
-                  <th className="text-center px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBookings.map((b) => (
-                  <tr key={b.id} className="border-t border-slate-100/80 hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3">
-                      <span className="text-xs font-mono font-bold text-teal-600">{b.reference}</span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="text-xs font-semibold text-slate-700">{b.passengerName}</div>
-                      <div className="text-[10px] text-slate-400">{b.passengerPhone}</div>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="text-xs text-slate-600">{b.route}</div>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${TYPE_BADGE[b.busType]}`}>
-                        {b.busType}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="text-xs text-slate-600">{b.tripDate}</div>
-                      <div className="text-[10px] text-slate-400">{b.departureTime}</div>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-xs font-bold text-slate-600">{b.seatNumber}</span>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className="text-xs font-bold text-slate-700">{b.amount}</span>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_MAP[b.status].color}`}>
-                        {STATUS_MAP[b.status].label}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      <button
-                        onClick={() => setSelectedBooking(b)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
-                        title="Détails"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">visibility</span>
-                      </button>
-                    </td>
+          {loading ? (
+            <div className="min-h-[200px] flex items-center justify-center">
+              <span className="material-symbols-outlined text-teal-500 text-3xl animate-spin">progress_activity</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th className="px-6 py-4">Réf. Billet</th>
+                    <th className="px-4 py-4">Passager</th>
+                    <th className="px-4 py-4">Itinéraire</th>
+                    <th className="px-4 py-4">Départ</th>
+                    <th className="px-4 py-4">Siège</th>
+                    <th className="px-4 py-4">Montant</th>
+                    <th className="px-4 py-4">Statut</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredBookings.map((b) => {
+                    const statusInfo = STATUS_MAP[b.status] || STATUS_MAP.confirmed;
+                    return (
+                      <tr key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <span className="font-mono font-extrabold text-teal-700 bg-teal-50 px-2 py-0.5 rounded text-xs">
+                            {b.reference}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-bold text-slate-900 text-sm">{b.passengerName}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">{b.passengerPhone}</div>
+                        </td>
+                        <td className="px-4 py-4 font-semibold text-slate-700">{b.route}</td>
+                        <td className="px-4 py-4">
+                          <div className="font-medium text-slate-800">{b.tripDate}</div>
+                          <div className="text-[11px] text-slate-400">{b.departureTime}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 font-mono font-bold text-slate-800 text-xs">
+                            {b.seatNumber}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 font-extrabold text-slate-900">{b.amount}</td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${statusInfo.color}`}>
+                            {statusInfo.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {b.status === 'confirmed' && (
+                              <button
+                                onClick={() => handleCheckIn(b.id)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold transition-all shadow-xs"
+                                title="Valider l'embarquement"
+                              >
+                                Valider
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setSelectedBooking(b)}
+                              className="text-xs text-slate-400 hover:text-teal-600 font-semibold transition-colors"
+                            >
+                              Détails
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </main>
 
@@ -223,59 +294,56 @@ export default function BookingsPage() {
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setSelectedBooking(null)}>
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-slate-200 mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-teal-500">receipt_long</span>
-                {selectedBooking.reference}
-              </h3>
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <span className="font-mono text-sm font-extrabold text-teal-600">{selectedBooking.reference}</span>
+                <h3 className="text-base font-bold text-slate-900 mt-0.5">Détail Réservation</h3>
+              </div>
               <button onClick={() => setSelectedBooking(null)} className="text-slate-400 hover:text-slate-600">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <div className="space-y-3">
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Passager</span>
-                <span className="text-xs font-bold text-slate-700">{selectedBooking.passengerName}</span>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between py-1.5 border-b border-slate-50">
+                <span className="text-slate-400">Passager</span>
+                <span className="font-bold text-slate-800">{selectedBooking.passengerName}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Téléphone</span>
-                <span className="text-xs text-slate-600">{selectedBooking.passengerPhone}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-50">
+                <span className="text-slate-400">Téléphone</span>
+                <span className="font-mono font-medium text-slate-800">{selectedBooking.passengerPhone}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Trajet</span>
-                <span className="text-xs font-semibold text-slate-700">{selectedBooking.route}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-50">
+                <span className="text-slate-400">Itinéraire</span>
+                <span className="font-bold text-slate-800">{selectedBooking.route}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Date & Heure</span>
-                <span className="text-xs text-slate-600">{selectedBooking.tripDate} à {selectedBooking.departureTime}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-50">
+                <span className="text-slate-400">Départ</span>
+                <span className="font-medium text-slate-800">{selectedBooking.tripDate} à {selectedBooking.departureTime}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Siège / Type</span>
-                <span className="text-xs text-slate-600">{selectedBooking.seatNumber} — {selectedBooking.busType}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-50">
+                <span className="text-slate-400">Siège</span>
+                <span className="font-bold text-slate-800">{selectedBooking.seatNumber}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Montant</span>
-                <span className="text-sm font-extrabold text-teal-600">{selectedBooking.amount}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Bagages</span>
-                <span className="text-xs text-slate-600">{selectedBooking.hasBaggage ? 'Oui' : 'Non'}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-xs text-slate-400">Flexible</span>
-                <span className="text-xs text-slate-600">{selectedBooking.isFlexible ? 'Oui' : 'Non'}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-xs text-slate-400">Statut</span>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${STATUS_MAP[selectedBooking.status].color}`}>
-                  {STATUS_MAP[selectedBooking.status].label}
-                </span>
+              <div className="flex justify-between py-1.5 border-b border-slate-50">
+                <span className="text-slate-400">Total réglé</span>
+                <span className="font-extrabold text-emerald-600 text-sm">{selectedBooking.amount}</span>
               </div>
             </div>
-            <div className="flex justify-end mt-6 pt-4 border-t border-slate-100">
-              <button onClick={() => setSelectedBooking(null)} className="px-5 py-2 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold transition-all shadow-sm">
+
+            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
+              <button onClick={() => setSelectedBooking(null)} className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
                 Fermer
               </button>
+              {selectedBooking.status === 'confirmed' && (
+                <button
+                  onClick={() => handleCheckIn(selectedBooking.id)}
+                  className="px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">qr_code_scanner</span>
+                  Confirmer embarquement
+                </button>
+              )}
             </div>
           </div>
         </div>
