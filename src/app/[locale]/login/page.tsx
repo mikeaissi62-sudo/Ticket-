@@ -69,6 +69,8 @@ export default function LoginPage() {
   // Phone field inside email registration form (matching the image)
   const [regPhoneNumber, setRegPhoneNumber] = useState('');
   const [regSelectedCountry, setRegSelectedCountry] = useState<CountryPhone>(COUNTRIES[0]);
+  // Se souvenir de moi
+  const [rememberMe, setRememberMe] = useState(true);
 
   // Check if already logged in -> redirect directly to home
   useEffect(() => {
@@ -111,7 +113,8 @@ export default function LoginPage() {
 
   // Redirection vers l'Accueil après connexion ou inscription
   const handleAuthSuccess = () => {
-    document.cookie = 'tp_guest=1; path=/; max-age=' + (30 * 24 * 60 * 60);
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 24 * 60 * 60;
+    document.cookie = `tp_guest=1; path=/; max-age=${maxAge}`;
     router.replace(`/${locale}`);
   };
 
@@ -553,14 +556,9 @@ export default function LoginPage() {
                   {phoneStep === 'input' ? (
                     <>
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="block text-[12px] font-bold text-[#334155]">
-                            Numéro de téléphone
-                          </label>
-                          <span className="text-[11px] font-semibold text-[#10B981]">
-                            {selectedCountry.digits} chiffres requis
-                          </span>
-                        </div>
+                        <label className="block text-[12px] font-bold text-[#334155] mb-1.5">
+                          Numéro de téléphone
+                        </label>
 
                         <div className="flex">
                           {/* Country Selector Dropdown */}
@@ -576,7 +574,7 @@ export default function LoginPage() {
                             >
                               {COUNTRIES.map(c => (
                                 <option key={c.code} value={c.code} className="text-[#0F172A] bg-white">
-                                  {c.flag} {c.name} ({c.dialCode} — {c.digits} ch.)
+                                  {c.flag} {c.name} ({c.dialCode})
                                 </option>
                               ))}
                             </select>
@@ -596,9 +594,16 @@ export default function LoginPage() {
                           />
                         </div>
 
-                        <div className="flex items-center justify-between mt-1.5 text-[11px] text-[#94A3B8]">
-                          <span>Indicatif : <strong className="text-[#334155]">{selectedCountry.dialCode}</strong> ({selectedCountry.name})</span>
-                          <span>Format : <strong className="text-[#334155]">{selectedCountry.digits} chiffres</strong></span>
+                        <div className="pt-2">
+                          <label className="flex items-center gap-2 cursor-pointer select-none text-[12px] text-[#475569]">
+                            <input
+                              type="checkbox"
+                              checked={rememberMe}
+                              onChange={e => setRememberMe(e.target.checked)}
+                              className="w-4 h-4 rounded border-[#CBD5E1] text-[#10B981] focus:ring-[#10B981] accent-[#10B981] cursor-pointer"
+                            />
+                            <span>Se souvenir de moi</span>
+                          </label>
                         </div>
                       </div>
 
@@ -717,6 +722,18 @@ export default function LoginPage() {
                         />
                       </div>
 
+                      <div className="flex items-center justify-between pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer select-none text-[12px] text-[#475569]">
+                          <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={e => setRememberMe(e.target.checked)}
+                            className="w-4 h-4 rounded border-[#CBD5E1] text-[#10B981] focus:ring-[#10B981] accent-[#10B981] cursor-pointer"
+                          />
+                          <span>Se souvenir de moi</span>
+                        </label>
+                      </div>
+
                       <button
                         type="submit"
                         disabled={isLoading}
@@ -817,6 +834,18 @@ export default function LoginPage() {
                         />
                       </div>
 
+                      <div className="flex items-center justify-between pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer select-none text-[12px] text-[#475569]">
+                          <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={e => setRememberMe(e.target.checked)}
+                            className="w-4 h-4 rounded border-[#CBD5E1] text-[#10B981] focus:ring-[#10B981] accent-[#10B981] cursor-pointer"
+                          />
+                          <span>Se souvenir de moi</span>
+                        </label>
+                      </div>
+
                       <button
                         type="submit"
                         disabled={isLoading}
@@ -827,7 +856,7 @@ export default function LoginPage() {
                         ) : (
                           <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
                         )}
-                        Créer mon compte et ouvrir mon profil
+                        Créer mon compte
                       </button>
                     </form>
                   )}
