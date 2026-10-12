@@ -24,17 +24,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normaliser le numéro béninois
+    // Normaliser le numéro avec son indicatif
     phone = phone.replace(/\s+/g, '').replace(/-/g, '');
-    if (!phone.startsWith('+229')) {
-      phone = '+229' + phone;
+    if (!phone.startsWith('+')) {
+      const dialCode = body.dialCode || '+229';
+      phone = (dialCode.startsWith('+') ? dialCode : '+' + dialCode) + phone;
     }
 
-    // Valider le format : +229 suivi de 8 chiffres (01, 40, 51, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99)
-    const beninPhoneRegex = /^\+229\d{8}$/;
-    if (!beninPhoneRegex.test(phone)) {
+    // Valider le format international E.164 (7 à 15 chiffres au total)
+    const internationalRegex = /^\+[1-9]\d{6,14}$/;
+    if (!internationalRegex.test(phone)) {
       return NextResponse.json(
-        { error: 'Numéro invalide. Format attendu : +229 XX XX XX XX (8 chiffres après +229).' },
+        { error: 'Numéro de téléphone invalide. Veuillez vérifier le nombre de chiffres.' },
         { status: 400 }
       );
     }

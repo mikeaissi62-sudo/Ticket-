@@ -12,7 +12,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') || '/fr/profil';
+  const next = requestUrl.searchParams.get('next') || '/fr';
 
   if (code) {
     const cookieStore = await cookies();
@@ -90,6 +90,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(next, requestUrl.origin));
   }
 
-  // Si pas de code, rediriger vers la page profil
-  return NextResponse.redirect(new URL('/fr/profil', requestUrl.origin));
+  // Si pas de code, rediriger vers l'accueil
+  return NextResponse.redirect(new URL('/fr', requestUrl.origin));
 }

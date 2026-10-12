@@ -22,10 +22,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normaliser le numéro
+    // Normaliser le numéro avec son indicatif
     phone = phone.replace(/\s+/g, '').replace(/-/g, '');
-    if (!phone.startsWith('+229')) {
-      phone = '+229' + phone;
+    if (!phone.startsWith('+')) {
+      const dialCode = body.dialCode || '+229';
+      phone = (dialCode.startsWith('+') ? dialCode : '+' + dialCode) + phone;
     }
 
     otp = otp.replace(/\s/g, '');

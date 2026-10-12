@@ -21,15 +21,37 @@ export async function middleware(request: NextRequest) {
 
   const isPartner = PARTNER_ROUTES.test(basePath);
   const isAdmin = ADMIN_ROUTES.test(basePath);
+  const isLoginPage = basePath === '/login' || basePath === '/register';
 
   // Fast path: Check if any Supabase auth cookie exists
   const hasAuthCookie = request.cookies.getAll().some(
     (c) => c.name.includes('sb-') || c.name.includes('supabase')
   );
 
+  // Check if user clicked "Passer cette étape" (Guest mode)
+  const isGuest = request.cookies.has('tp_guest');
+
+  // Extract locale (default 'fr')
+  const localeMatch = pathname.match(/^\/(fr|en)/);
+  const locale = localeMatch ? localeMatch[1] : 'fr';
+
+  // If already authenticated and trying to access /login, redirect to profile
+  if (isLoginPage && hasAuthCookie) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}/profil`;
+    return NextResponse.redirect(url);
+  }
+
+  // GATEKEEPER: If first time visitor (not logged in, not marked as guest, not on login page, not on public asset)
+  // redirect them to the login & onboarding page first
+  if (!hasAuthCookie && !isGuest && !isLoginPage) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}/login`;
+    return NextResponse.redirect(url);
+  }
+
   // PERFORMANCE BOOST: If it's a public route and no auth session exists,
   // skip the external Supabase network roundtrip completely.
-  // This reduces page transition latency from ~500ms down to instant (~5ms)!
   if (!isPartner && !isAdmin && !hasAuthCookie) {
     return intlResponse;
   }

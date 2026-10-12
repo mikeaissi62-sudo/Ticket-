@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password, firstName, lastName, phone } = body;
 
-    if (!email || !password || !firstName || !lastName || !phone) {
+    if (!email || !password || !firstName || !lastName) {
       return NextResponse.json(
         { error: 'Veuillez remplir tous les champs obligatoires.' },
         { status: 400 }

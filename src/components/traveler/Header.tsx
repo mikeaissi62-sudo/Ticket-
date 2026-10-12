@@ -1,14 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { usePathname } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export const Header = () => {
   const locale = useLocale();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const [supabase] = useState(() => createClient());
+  const [user, setUser] = useState<{ id: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const isActive = (path: string) => {
     if (path === `/${locale}`) {
@@ -138,20 +155,38 @@ export const Header = () => {
               <span className="material-symbols-outlined text-[20px]">notifications</span>
             </Link>
 
-            {/* Profil Button */}
-            <Link
-              href={`/${locale}/profil`}
-              prefetch={true}
-              aria-label="Espace Profil Voyageur"
-              title="Mon Profil"
-              className={`hidden sm:flex w-10 h-10 items-center justify-center rounded-xl transition-all active:scale-90 duration-75 shrink-0 ${
-                isActive(`/${locale}/profil`)
-                  ? 'bg-primary text-on-primary'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[20px]">person</span>
-            </Link>
+            {/* Profil / Connexion Button */}
+            {user ? (
+              <Link
+                href={`/${locale}/profil`}
+                prefetch={true}
+                aria-label="Mon Profil"
+                title="Mon Profil"
+                className={`hidden sm:flex h-10 px-3 items-center justify-center gap-1.5 rounded-xl transition-all active:scale-95 duration-75 shrink-0 ${
+                  isActive(`/${locale}/profil`)
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">person</span>
+                <span className="text-[12px] font-bold">Profil</span>
+              </Link>
+            ) : (
+              <Link
+                href={`/${locale}/login`}
+                prefetch={true}
+                aria-label="Se connecter"
+                title="Connexion / Inscription"
+                className={`hidden sm:flex h-10 px-3.5 items-center justify-center gap-1.5 rounded-xl transition-all active:scale-95 duration-75 shrink-0 ${
+                  isActive(`/${locale}/login`)
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40 font-bold text-[12px]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">login</span>
+                <span>Connexion</span>
+              </Link>
+            )}
 
             {/* Mobile menu hamburger button */}
             <button
@@ -258,17 +293,17 @@ export const Header = () => {
                 Notifications
               </Link>
               <Link 
-                href={`/${locale}/profil`} 
+                href={user ? `/${locale}/profil` : `/${locale}/login`} 
                 prefetch={true}
                 onClick={() => setMobileMenuOpen(false)} 
                 className={`px-4 py-3 rounded-xl text-[14px] font-semibold flex items-center gap-3 active:scale-98 transition-all duration-75 ${
-                  isActive(`/${locale}/profil`)
+                  isActive(user ? `/${locale}/profil` : `/${locale}/login`)
                     ? 'bg-primary/10 text-primary font-bold'
                     : 'text-[#475569] hover:bg-surface-container'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">person</span>
-                Mon Profil
+                <span className="material-symbols-outlined text-[20px]">{user ? 'person' : 'login'}</span>
+                {user ? 'Mon Profil' : 'Connexion / Inscription'}
               </Link>
               <hr className="my-2 border-outline-variant/40" />
               <a 
