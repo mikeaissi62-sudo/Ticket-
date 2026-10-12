@@ -58,19 +58,57 @@ export default function ResultsPage() {
   const [filterDirect, setFilterDirect] = useState(false);
   const [sortBy, setSortBy] = useState('timeAsc');
 
-  const allTrips = generateMockTrips(from, to, dateParam);
-  let trips = allTrips;
+  const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
+  const [isLiveSupabase, setIsLiveSupabase] = useState(false);
+  const [isLoadingLive, setIsLoadingLive] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTrips() {
+      setIsLoadingLive(true);
+      try {
+        const res = await fetch(`/api/trips?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${dateParam}&passengers=${passengers}`);
+        if (!res.ok) throw new Error('API trips error');
+        const data = await res.json();
+        if (isMounted && data.trips && data.trips.length > 0) {
+          setLiveTrips(data.trips);
+          setIsLiveSupabase(true);
+        } else if (isMounted) {
+          setLiveTrips(null);
+          setIsLiveSupabase(false);
+        }
+      } catch (err) {
+        console.warn('Fallback aux départs locaux:', err);
+        if (isMounted) {
+          setLiveTrips(null);
+          setIsLiveSupabase(false);
+        }
+      } finally {
+        if (isMounted) setIsLoadingLive(false);
+      }
+    }
+    loadTrips();
+    return () => { isMounted = false; };
+  }, [from, to, dateParam, passengers]);
+
+  const rawTrips = liveTrips || generateMockTrips(from, to, dateParam);
+  let trips = [...rawTrips];
   const isCompanySelected = filterConfort || filterBaobab || filterATT || filterSTM;
   if (isCompanySelected) {
-    trips = trips.filter(t => 
-      (filterConfort && t.companyId === 'c-1') ||
-      (filterBaobab && t.companyId === 'c-2') ||
-      (filterATT && t.companyId === 'c-3') ||
-      (filterSTM && t.companyId === 'c-4')
-    );
+    trips = trips.filter(t => {
+      const slug = (t.companySlug || '').toLowerCase();
+      const name = (t.companyName || '').toLowerCase();
+      const id = String(t.companyId || '');
+      return (
+        (filterConfort && (slug.includes('confort') || name.includes('confort') || id === 'c-1')) ||
+        (filterBaobab && (slug.includes('baobab') || name.includes('baobab') || id === 'c-2')) ||
+        (filterATT && (slug.includes('att') || name.includes('att') || id === 'c-3')) ||
+        (filterSTM && (slug.includes('stm') || name.includes('stm') || id === 'c-4'))
+      );
+    });
   }
-  if (filterVIP) trips = trips.filter(t => t.features.includes('ac'));
-  if (filterDirect) trips = trips.filter(t => t.duration.startsWith('2h') || t.duration.startsWith('3h')); // dummy direct
+  if (filterVIP) trips = trips.filter(t => t.features?.includes('ac') || t.features?.includes('vip') || t.busType === 'VIP');
+  if (filterDirect) trips = trips.filter(t => t.duration?.startsWith('2h') || t.duration?.startsWith('3h') || t.duration?.startsWith('5h'));
 
   trips.sort((a, b) => {
     if (sortBy === 'timeAsc') return a.departureTime.localeCompare(b.departureTime);
@@ -158,6 +196,11 @@ export default function ResultsPage() {
               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/50 text-on-secondary-container">
                 <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
                 <span className="font-label-sm text-label-sm font-semibold">{trips.length} Départ{trips.length > 1 ? 's' : ''} Direct{trips.length > 1 ? 's' : ''} Garanti{trips.length > 1 ? 's' : ''}</span>
+                {isLiveSupabase && (
+                  <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Supabase Live
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => setShowSearchDrawer(!showSearchDrawer)}
@@ -370,44 +413,65 @@ export default function ResultsPage() {
           {/* ======== List of Departures (8 columns) ======== */}
           <div className="lg:col-span-8 flex flex-col gap-space-md">
             
-                        {trips.length === 0 && (
+            {isLoadingLive ? (
+              <div className="bg-surface-container-lowest rounded-xl p-space-xl text-center shadow-sm">
+                <span className="material-symbols-outlined text-secondary text-[40px] animate-spin mb-3 inline-block">progress_activity</span>
+                <h3 className="font-title-md text-title-md font-bold text-on-surface">Recherche en temps réel...</h3>
+                <p className="font-body-md text-body-md text-on-surface-variant mt-1">Interrogation des compagnies partenaires et des départs en direct.</p>
+              </div>
+            ) : trips.length === 0 ? (
               <div className="bg-surface-container-lowest rounded-xl p-space-lg text-center shadow-sm">
                 <span className="material-symbols-outlined text-outline text-[48px] mb-4">search_off</span>
                 <h3 className="font-title-lg text-title-lg font-bold text-on-surface mb-2">Aucun départ ne correspond</h3>
                 <p className="font-body-md text-body-md text-on-surface-variant">Essayez de modifier vos filtres de recherche.</p>
                 <button onClick={() => { setFilterConfort(false); setFilterBaobab(false); setFilterATT(false); setFilterSTM(false); setFilterVIP(false); setFilterDirect(false); }} className="mt-4 px-4 py-2 bg-primary text-on-primary rounded-lg font-semibold">Réinitialiser les filtres</button>
               </div>
+            ) : (
+              trips.map((trip) => {
+                const company = COMPANIES.find((c) => c.id === trip.companyId) || {
+                  name: trip.companyName || 'Compagnie',
+                  subtitle: trip.companySubtitle || 'Transport de voyageurs',
+                  isOfficialPartner: trip.isPartnerOfficial ?? false,
+                };
+                const depStation = trip.departureStation || STATIONS.find(s => s.id === trip.departureStationId)?.name || `Gare ${from}`;
+                const arrStation = trip.arrivalStation || STATIONS.find(s => s.id === trip.arrivalStationId)?.name || `Gare ${to}`;
+                return (
+                  <div key={trip.id} className="relative">
+                    <TripCard
+                      companyName={trip.companyName || company.name}
+                      companySubtitle={trip.companySubtitle || company.subtitle || "Transport de voyageurs"}
+                      isPartnerOfficial={trip.isPartnerOfficial ?? company.isOfficialPartner ?? false}
+                      seatsLeft={trip.availableSeats}
+                      departureTime={trip.departureTime}
+                      departureLabel=""
+                      departureStation={depStation}
+                      arrivalTime={trip.arrivalTime}
+                      arrivalStation={arrStation}
+                      duration={trip.duration}
+                      directLabel={trip.features?.includes("direct") ? "Trajet Direct" : "Départ certifié"}
+                      amenities={trip.features || ['ac']}
+                      price={trip.price}
+                      priceLabel=""
+                      onSelect={() => {
+                        selectTrip({
+                          id: trip.id,
+                          companyId: trip.companyId,
+                          departureTime: trip.departureTime,
+                          arrivalTime: trip.arrivalTime,
+                          duration: trip.duration,
+                          price: trip.price,
+                          departureStationId: trip.departureStationId,
+                          arrivalStationId: trip.arrivalStationId,
+                          availableSeats: trip.availableSeats,
+                          features: trip.features || [],
+                        });
+                        router.push(`/${locale}/reservation/${trip.id}`);
+                      }}
+                    />
+                  </div>
+                );
+              })
             )}
-
-            {trips.map((trip) => {
-              const company = COMPANIES.find((c) => c.id === trip.companyId) || COMPANIES[0];
-              const depStation = STATIONS.find(s => s.id === trip.departureStationId)?.name || '';
-              const arrStation = STATIONS.find(s => s.id === trip.arrivalStationId)?.name || '';
-              return (
-                <div key={trip.id} className="relative">
-                  <TripCard
-                    companyName={company.name}
-                    companySubtitle={company.subtitle || "Transport de voyageurs"}
-                    isPartnerOfficial={company.isOfficialPartner || false}
-                    seatsLeft={trip.availableSeats}
-                    departureTime={trip.departureTime}
-                    departureLabel=""
-                    departureStation={depStation}
-                    arrivalTime={trip.arrivalTime}
-                    arrivalStation={arrStation}
-                    duration={trip.duration}
-                    directLabel={trip.features.includes("direct") ? "Trajet Direct" : "Avec arrêts"}
-                    amenities={trip.features}
-                    price={trip.price}
-                    priceLabel=""
-                    onSelect={() => {
-                      selectTrip(trip);
-                      router.push(`/${locale}/reservation/${trip.id}`);
-                    }}
-                  />
-                </div>
-              );
-            })}
 
           </div>
 
