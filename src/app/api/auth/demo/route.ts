@@ -4,9 +4,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 // POST /api/auth/demo — Prépare et authentifie un compte démo (traveler, partner ou admin)
 export async function POST(req: NextRequest) {
   try {
+    const url = new URL(req.url);
+    const queryRole = url.searchParams.get('role');
     const body = await req.json().catch(() => ({}));
+    const roleCandidate = (queryRole || body?.role || '').toLowerCase();
     const requestedRole: 'traveler' | 'partner' | 'admin' =
-      ['traveler', 'partner', 'admin'].includes(body?.role) ? body.role : 'traveler';
+      ['traveler', 'partner', 'admin'].includes(roleCandidate) ? (roleCandidate as any) : 'traveler';
 
     const admin = createAdminClient();
 

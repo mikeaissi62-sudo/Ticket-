@@ -7,6 +7,14 @@ import { createClient } from '../supabase/client';
 import type { UserRole, User as UserProfile } from '../types/database';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
+function useSafeLocale(): string {
+  try {
+    return useLocale();
+  } catch {
+    return 'fr';
+  }
+}
+
 export interface AuthContextType {
   user: SupabaseUser | null;
   profile: UserProfile | null;
@@ -151,7 +159,7 @@ export function AuthGuard({
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const locale = useLocale();
+  const locale = useSafeLocale();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated && redirectTo) {
@@ -192,7 +200,7 @@ export function RoleGuard({
 }) {
   const { role, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const locale = useLocale();
+  const locale = useSafeLocale();
 
   const isAllowed = isAuthenticated && allowedRoles.includes(role);
 

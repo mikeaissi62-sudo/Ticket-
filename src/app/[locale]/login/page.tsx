@@ -82,7 +82,12 @@ export default function LoginPage() {
           const redirectParam = searchParams.get('redirect');
           if (redirectParam) {
             const cleanPath = redirectParam.replace(/^\/(fr|en)/, '');
-            router.replace(`/${locale}${cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath}`);
+            const target = cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath;
+            if (target.startsWith('/admin') || target.startsWith('/partner')) {
+              window.location.href = target;
+              return;
+            }
+            router.replace(`/${locale}${target}`);
             return;
           }
           router.replace(`/${locale}`);
@@ -122,7 +127,12 @@ export default function LoginPage() {
       const redirectParam = searchParams.get('redirect');
       if (redirectParam) {
         const cleanPath = redirectParam.replace(/^\/(fr|en)/, '');
-        router.replace(`/${locale}${cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath}`);
+        const target = cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath;
+        if (target.startsWith('/admin') || target.startsWith('/partner')) {
+          window.location.href = target;
+          return;
+        }
+        router.replace(`/${locale}${target}`);
         router.refresh();
         return;
       }
@@ -336,7 +346,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/auth/demo', {
+      const res = await fetch(`/api/auth/demo?role=${role}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),

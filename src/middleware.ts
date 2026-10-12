@@ -31,15 +31,105 @@ const TRAVELER_PROTECTED_ROUTES = [
   '/reservation',
 ];
 
-// Routes protégées par rôle
-const PARTNER_ROUTES = /^\/partner(\/|$)/;
-const ADMIN_ROUTES = /^\/admin(\/|$)/;
+// Regex des routes de gestion
+const PARTNER_ROUTES = /^\/partner(\/.*)?$/;
+const ADMIN_ROUTES = /^\/admin(\/.*)?$/;
 
 export async function middleware(request: NextRequest) {
-  // 1. Exécution du middleware intl pour la gestion des langues
+  const pathname = request.nextUrl.pathname;
+
+  // 1. Rediriger les tentatives d'accès aux portails avec préfixe de langue vers les routes racine
+  // (ex: /fr/admin -> /admin, /fr/partner -> /partner)
+  if (/^\/(fr|en)\/(admin|partner)(\/.*)?$/.test(pathname)) {
+    const cleanUrl = request.nextUrl.clone();
+    cleanUrl.pathname = pathname.replace(/^\/(fr|en)/, '');
+    return NextResponse.redirect(cleanUrl);
+  }
+
+  const isPartner = PARTNER_ROUTES.test(pathname);
+  const isAdmin = ADMIN_ROUTES.test(pathname);
+
+  // ============================================================
+  // 2. Traitement dédié des portails /admin et /partner (HORS next-intl)
+  // ============================================================
+  if (isPartner || isAdmin) {
+    let response = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return response;
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Non connecté -> Redirection vers /fr/login
+    if (!user) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/fr/login';
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Vérifier le rôle dans public.users
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const role = profile?.role || 'traveler';
+
+    // Route Partner : réservée aux 'partner' et 'admin'
+    if (isPartner && role !== 'partner' && role !== 'admin') {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = '/fr';
+      return NextResponse.redirect(homeUrl);
+    }
+
+    // Route Admin : réservée strictement aux 'admin'
+    if (isAdmin && role !== 'admin') {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = '/fr';
+      return NextResponse.redirect(homeUrl);
+    }
+
+    return response;
+  }
+
+  // ============================================================
+  // 3. Traitement des routes grand public / voyageur (avec next-intl)
+  // ============================================================
   const intlResponse = intlMiddleware(request);
 
-  const pathname = request.nextUrl.pathname;
   // Extraire le chemin de base sans préfixe de langue (ex: /reservation depuis /fr/reservation)
   const basePath = pathname.replace(/^\/(fr|en)/, '') || '/';
 
@@ -47,15 +137,12 @@ export async function middleware(request: NextRequest) {
   const localeMatch = pathname.match(/^\/(fr|en)/);
   const locale = localeMatch ? localeMatch[1] : 'fr';
 
-  // Catégorisation des routes
   const isPublic = PUBLIC_ROUTES.some(
     (route) => basePath === route || basePath.startsWith(route + '/')
   );
   const isTravelerProtected = TRAVELER_PROTECTED_ROUTES.some(
     (route) => basePath === route || basePath.startsWith(route + '/')
   );
-  const isPartner = PARTNER_ROUTES.test(basePath);
-  const isAdmin = ADMIN_ROUTES.test(basePath);
   const isLoginPage = basePath === '/login' || basePath === '/register';
 
   // Fast path: Détection rapide de cookie de session Supabase
@@ -78,21 +165,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Protection Partner/Admin : Non authentifié sur route partner ou admin
-  if ((isPartner || isAdmin) && !hasAuthCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/login`;
-    url.searchParams.set('redirect', basePath);
-    return NextResponse.redirect(url);
-  }
-
-  // PERFORMANCE BOOST : Si route publique et pas de cookie d'authentification
-  // on retourne directement sans appel externe Supabase
+  // Si route publique et pas de cookie d'authentification, retourner directement
   if (isPublic && !hasAuthCookie) {
     return intlResponse;
   }
 
-  // Configuration Supabase pour validation serveur et contrôle des rôles
+  // Configuration Supabase pour validation serveur voyageur
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -100,27 +178,22 @@ export async function middleware(request: NextRequest) {
     return intlResponse;
   }
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          cookiesToSet.forEach(({ name, value, options }) =>
-            intlResponse.cookies.set(name, value, options)
-          );
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        );
+        cookiesToSet.forEach(({ name, value, options }) =>
+          intlResponse.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
 
-  // Rafraîchir la session et vérifier l'utilisateur courant
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -131,31 +204,6 @@ export async function middleware(request: NextRequest) {
     url.pathname = `/${locale}/login`;
     url.searchParams.set('redirect', basePath);
     return NextResponse.redirect(url);
-  }
-
-  // 5.3 Contrôle des rôles : Partner et Admin
-  if ((isPartner || isAdmin) && user) {
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    const role = profile?.role || 'traveler';
-
-    // Route Partner : réservée aux 'partner' et 'admin'
-    if (isPartner && role !== 'partner' && role !== 'admin') {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${locale}`;
-      return NextResponse.redirect(url);
-    }
-
-    // Route Admin : réservée strictement aux 'admin'
-    if (isAdmin && role !== 'admin') {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${locale}`;
-      return NextResponse.redirect(url);
-    }
   }
 
   return intlResponse;

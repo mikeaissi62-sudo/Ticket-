@@ -21,7 +21,6 @@ export default function AdminLayout({
         <AuthProvider>
           <RoleGuard
             allowedRoles={['admin']}
-            redirectTo="/login"
             fallback={
               <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-6">
                 <div className="max-w-md w-full bg-slate-800 rounded-2xl p-8 border border-slate-700 text-center shadow-xl">

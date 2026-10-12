@@ -21,7 +21,6 @@ export default function PartnerLayout({
         <AuthProvider>
           <RoleGuard
             allowedRoles={['partner', 'admin']}
-            redirectTo="/login"
             fallback={
               <div className="min-h-screen flex items-center justify-center bg-[#0B1929] text-white p-6">
                 <div className="max-w-md w-full bg-[#122236] rounded-2xl p-8 border border-slate-700/50 text-center shadow-xl">
