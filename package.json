@@ -17,6 +17,7 @@
     "next-intl": "^4.14.5",
     "react": "^18",
     "react-dom": "^18",
+    "resend": "^6.32.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
