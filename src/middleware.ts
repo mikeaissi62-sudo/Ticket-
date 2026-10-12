@@ -39,11 +39,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const isHomePage = basePath === '/' || basePath === '';
-
-  // GATEKEEPER: Unauthenticated users can view the Home page (Accueil).
-  // Any action or attempt to access other pages redirects straight to /login
-  if (!hasAuthCookie && !isLoginPage && !isHomePage) {
+  // GATEKEEPER: Lorsqu'une personne accède nouvellement au site (non connectée),
+  // elle est automatiquement redirigée vers la page de login
+  if (!hasAuthCookie && !isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     return NextResponse.redirect(url);
