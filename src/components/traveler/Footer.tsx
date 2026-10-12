@@ -26,9 +26,14 @@ export const Footer = () => {
             <p className="font-body-md text-body-md text-on-surface-variant mb-space-md">
               Plateforme de réservation et comparateur interurbain certifié au Bénin. Voyagez sereinement avec nos flottes partenaires équipées de standards VIP.
             </p>
-            <div className="flex items-center gap-space-xs text-secondary">
-              <span className="material-symbols-outlined text-[18px]">verified</span>
-              <span className="font-label-sm text-label-sm font-semibold">Billetterie Conventionnée Officielle</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-space-xs text-secondary">
+                <span className="material-symbols-outlined text-[18px]">verified</span>
+                <span className="font-label-sm text-label-sm font-semibold">Billetterie Conventionnée</span>
+              </div>
+              <Link href={`/${locale}/la-solution`} className="text-[12px] text-primary hover:text-secondary underline font-semibold transition-colors">
+                Découvrir La Solution ➔
+              </Link>
             </div>
           </div>
 
