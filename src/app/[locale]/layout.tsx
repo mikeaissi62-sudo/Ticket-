@@ -5,6 +5,7 @@ import {getMessages} from 'next-intl/server';
 import {notFound} from 'next/navigation';
 import { Header } from "../../components/traveler/Header";
 import { Footer } from "../../components/traveler/Footer";
+import { AuthProvider } from "@/lib/auth/client-guards";
 
 export const metadata: Metadata = {
   title: "Ticket+ Bénin | Réservation de bus",
@@ -34,11 +35,13 @@ export default async function RootLayout({
       </head>
       <body className="bg-background font-body-md text-on-surface antialiased min-h-screen" style={{ background: 'linear-gradient(135deg, #D4DFEE 0%, #DFE8F4 50%, #D8E3F0 100%)' }}>
         <NextIntlClientProvider messages={messages}>
-          <Header />
-          <main className="w-full pt-20 min-h-screen" style={{ background: 'transparent' }}>
-            {children}
-          </main>
-          <Footer />
+          <AuthProvider>
+            <Header />
+            <main className="w-full pt-20 min-h-screen" style={{ background: 'transparent' }}>
+              {children}
+            </main>
+            <Footer />
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>
