@@ -81,7 +81,14 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      return NextResponse.json({ trips: formatted, count: formatted.length, source: 'supabase_trips' });
+      return NextResponse.json(
+        { trips: formatted, count: formatted.length, source: 'supabase_trips' },
+        {
+          headers: {
+            'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+          },
+        }
+      );
     }
 
     // 2. Si aucun voyage daté n'existe encore pour cette date,
@@ -177,11 +184,18 @@ export async function GET(request: NextRequest) {
     // Trier par heure de départ
     formatted.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
 
-    return NextResponse.json({
-      trips: formatted,
-      count: formatted.length,
-      source: 'supabase_schedules',
-    });
+    return NextResponse.json(
+      {
+        trips: formatted,
+        count: formatted.length,
+        source: 'supabase_schedules',
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+        },
+      }
+    );
   } catch (err) {
     console.error('API trips error:', err);
     return NextResponse.json(

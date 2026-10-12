@@ -41,7 +41,8 @@ export const BottomNav = () => {
             <Link 
               key={item.href} 
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-colors ${
+              prefetch={true}
+              className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-all active:scale-90 duration-75 ${
                 isActive ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
@@ -54,7 +55,11 @@ export const BottomNav = () => {
       
       {/* Floating Action Button (MoMo) */}
       <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-        <Link href={`/${locale}/momo`} className="flex flex-col items-center">
+        <Link 
+          href={`/${locale}/momo`} 
+          prefetch={true}
+          className="flex flex-col items-center active:scale-95 transition-transform duration-75"
+        >
           <div className="w-14 h-14 bg-brand-yellow rounded-full flex items-center justify-center shadow-lg border-4 border-white">
             <QrCode className="w-6 h-6 text-brand-darkBlue" />
           </div>

@@ -24,7 +24,11 @@ export const Header = () => {
           
           {/* Logo */}
           <div className="flex items-center gap-2 z-10 shrink-0">
-            <Link href={`/${locale}`} className="flex items-center gap-space-sm text-left group shrink-0">
+            <Link 
+              href={`/${locale}`} 
+              prefetch={true}
+              className="flex items-center gap-space-sm text-left group shrink-0 active:scale-95 transition-transform duration-75"
+            >
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-[0_4px_20px_-2px_rgba(15,23,42,0.08)]">
                 <span className="material-symbols-outlined text-[22px]">confirmation_number</span>
               </div>
@@ -41,7 +45,8 @@ export const Header = () => {
           <nav className="hidden lg:flex items-center gap-2 xl:gap-4 absolute left-1/2 -translate-x-1/2 shrink-0 whitespace-nowrap">
             <Link 
               href={`/${locale}`} 
-              className={`px-space-sm py-2 transition-all rounded-lg font-body-md text-body-md ${
+              prefetch={true}
+              className={`px-space-sm py-2 transition-all rounded-lg font-body-md text-body-md active:scale-95 duration-75 ${
                 isActive(`/${locale}`) 
                   ? 'bg-primary-container/30 text-primary font-bold' 
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
@@ -51,7 +56,8 @@ export const Header = () => {
             </Link>
             <Link 
               href={`/${locale}/compagnies`} 
-              className={`inline-flex items-center gap-1.5 px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
+              prefetch={true}
+              className={`inline-flex items-center gap-1.5 px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all active:scale-95 duration-75 ${
                 isActive(`/${locale}/compagnies`)
                   ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
@@ -62,7 +68,8 @@ export const Header = () => {
             </Link>
             <Link 
               href={`/${locale}/tarifs-et-lignes`} 
-              className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
+              prefetch={true}
+              className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all active:scale-95 duration-75 ${
                 isActive(`/${locale}/tarifs-et-lignes`)
                   ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
@@ -72,7 +79,8 @@ export const Header = () => {
             </Link>
             <Link 
               href={`/${locale}/contact`} 
-              className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all ${
+              prefetch={true}
+              className={`px-space-sm py-2 rounded-lg font-body-md text-body-md transition-all active:scale-95 duration-75 ${
                 isActive(`/${locale}/contact`)
                   ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
@@ -90,7 +98,7 @@ export const Header = () => {
               target="_blank"
               rel="noopener noreferrer"
               title="Assistance WhatsApp"
-              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-secondary-container/60 hover:bg-secondary-container text-on-secondary-container transition-colors shrink-0"
+              className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-secondary-container/60 hover:bg-secondary-container text-on-secondary-container transition-all active:scale-90 duration-75 shrink-0"
             >
               <span className="material-symbols-outlined text-[20px]">chat</span>
             </a>
@@ -102,15 +110,17 @@ export const Header = () => {
 
             <Link
               href={`/${locale}/mon-billet`}
-              className="px-space-md py-2.5 h-10 flex items-center justify-center rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-colors shadow-[0_4px_20px_-2px_rgba(15,23,42,0.08)] whitespace-nowrap"
+              prefetch={true}
+              className="px-space-md py-2.5 h-10 flex items-center justify-center rounded-xl bg-primary hover:bg-primary-container text-on-primary font-body-md text-body-md font-semibold transition-all active:scale-95 duration-75 shadow-[0_4px_20px_-2px_rgba(15,23,42,0.08)] whitespace-nowrap"
             >
               Mon Billet
             </Link>
 
             <Link
               href={`/${locale}/profil`}
+              prefetch={true}
               aria-label="Espace Profil Voyageur"
-              className="hidden lg:flex w-10 h-10 rounded-full bg-primary items-center justify-center hover:bg-primary-container transition-colors shrink-0"
+              className="hidden lg:flex w-10 h-10 rounded-full bg-primary items-center justify-center hover:bg-primary-container transition-all active:scale-90 duration-75 shrink-0"
             >
               <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
             </Link>
@@ -118,13 +128,15 @@ export const Header = () => {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors lg:hidden shrink-0"
+              aria-label="Menu"
+              className="lg:hidden p-2 rounded-xl text-on-surface hover:bg-surface-container active:scale-90 transition-transform duration-75"
             >
-              <span className="material-symbols-outlined text-on-surface text-[20px]">
+              <span className="material-symbols-outlined text-[24px]">
                 {mobileMenuOpen ? 'close' : 'menu'}
               </span>
             </button>
           </div>
+
         </div>
       </header>
 
@@ -134,8 +146,9 @@ export const Header = () => {
           <nav className="flex flex-col p-4 gap-1">
             <Link 
               href={`/${locale}`} 
+              prefetch={true}
               onClick={() => setMobileMenuOpen(false)} 
-              className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md active:scale-98 transition-all duration-75 ${
                 isActive(`/${locale}`) 
                   ? 'bg-primary-container/30 text-primary font-bold' 
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
@@ -145,8 +158,9 @@ export const Header = () => {
             </Link>
             <Link 
               href={`/${locale}/compagnies`} 
+              prefetch={true}
               onClick={() => setMobileMenuOpen(false)} 
-              className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center justify-between ${
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center justify-between active:scale-98 transition-all duration-75 ${
                 isActive(`/${locale}/compagnies`)
                   ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
@@ -159,8 +173,9 @@ export const Header = () => {
             </Link>
             <Link 
               href={`/${locale}/tarifs-et-lignes`} 
+              prefetch={true}
               onClick={() => setMobileMenuOpen(false)} 
-              className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md active:scale-98 transition-all duration-75 ${
                 isActive(`/${locale}/tarifs-et-lignes`)
                   ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
@@ -170,8 +185,9 @@ export const Header = () => {
             </Link>
             <Link 
               href={`/${locale}/contact`} 
+              prefetch={true}
               onClick={() => setMobileMenuOpen(false)} 
-              className={`px-4 py-3 rounded-xl font-body-md text-body-md ${
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md active:scale-98 transition-all duration-75 ${
                 isActive(`/${locale}/contact`)
                   ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
@@ -181,8 +197,9 @@ export const Header = () => {
             </Link>
             <Link 
               href={`/${locale}/profil`} 
+              prefetch={true}
               onClick={() => setMobileMenuOpen(false)} 
-              className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center gap-2 ${
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center gap-2 active:scale-98 transition-all duration-75 ${
                 isActive(`/${locale}/profil`)
                   ? 'bg-primary-container/30 text-primary font-bold'
                   : 'text-on-surface-variant hover:bg-surface-container font-medium'
@@ -192,7 +209,12 @@ export const Header = () => {
               Mon Profil
             </Link>
             <hr className="my-2 border-outline-variant" />
-            <a href="https://wa.me/2290154658907" target="_blank" rel="noopener noreferrer" className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-secondary-container bg-secondary-container/60 flex items-center gap-2">
+            <a 
+              href="https://wa.me/2290154658907" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="px-4 py-3 rounded-xl font-body-md text-body-md font-medium text-on-secondary-container bg-secondary-container/60 flex items-center gap-2 active:scale-98 transition-all duration-75"
+            >
               <span className="material-symbols-outlined text-[18px]">chat</span>
               Assistance WhatsApp
             </a>

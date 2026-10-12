@@ -49,7 +49,15 @@ export const SearchForm = () => {
     setToCity(temp);
   };
 
+  const [isSearching, setIsSearching] = useState(false);
+
+  const prefetchResults = () => {
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    router.prefetch(`/${locale}/resultats?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
+  };
+
   const handleSearch = () => {
+    setIsSearching(true);
     const dateStr = selectedDate.toISOString().split('T')[0];
     setSearch(fromCity.name, toCity.name, dateStr, passengers);
     router.push(`/${locale}/resultats?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
@@ -315,10 +323,22 @@ export const SearchForm = () => {
         </div>
         <button
           onClick={handleSearch}
-          className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#0F172A] text-white hover:bg-[#1E293B] text-[15px] font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
+          onMouseEnter={prefetchResults}
+          onTouchStart={prefetchResults}
+          disabled={isSearching}
+          className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#0F172A] text-white hover:bg-[#1E293B] text-[15px] font-semibold inline-flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.97] cursor-pointer disabled:opacity-80"
         >
-          <span>Rechercher les départs</span>
-          <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+          {isSearching ? (
+            <>
+              <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+              <span>Recherche en cours...</span>
+            </>
+          ) : (
+            <>
+              <span>Rechercher les départs</span>
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+            </>
+          )}
         </button>
       </div>
     </div>

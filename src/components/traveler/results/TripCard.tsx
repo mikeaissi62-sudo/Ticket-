@@ -141,7 +141,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           <p className="text-[11px] text-[#64748B]">{priceLabel}</p>
         </div>
 
-        <button onClick={onSelect} className="w-full sm:w-auto px-6 py-3 bg-[#0F172A] text-white text-[14px] font-semibold rounded-xl hover:bg-[#1E293B] transition-colors flex items-center justify-center gap-2 shadow-sm">
+        <button onClick={onSelect} className="w-full sm:w-auto px-6 py-3 bg-[#0F172A] text-white text-[14px] font-semibold rounded-xl hover:bg-[#1E293B] active:scale-[0.97] transition-all duration-75 flex items-center justify-center gap-2 shadow-sm cursor-pointer">
           Choisir mon siège
           <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
         </button>
