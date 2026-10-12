@@ -1,11 +1,29 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-// POST /api/auth/demo — Prépare et authentifie le compte voyageur démo avec email pré-confirmé
-export async function POST() {
+// POST /api/auth/demo — Prépare et authentifie un compte démo (traveler, partner ou admin)
+export async function POST(req: NextRequest) {
   try {
+    const body = await req.json().catch(() => ({}));
+    const requestedRole: 'traveler' | 'partner' | 'admin' =
+      ['traveler', 'partner', 'admin'].includes(body?.role) ? body.role : 'traveler';
+
     const admin = createAdminClient();
-    const demoEmail = 'voyageur.demo@ticketplus.bj';
+
+    let demoEmail = 'voyageur.demo@ticketplus.bj';
+    let firstName = 'Koffi';
+    let lastName = 'Dossou';
+
+    if (requestedRole === 'partner') {
+      demoEmail = 'partner.demo@ticketplus.bj';
+      firstName = 'Confort';
+      lastName = 'Lines Partner';
+    } else if (requestedRole === 'admin') {
+      demoEmail = 'admin.demo@ticketplus.bj';
+      firstName = 'Super';
+      lastName = 'Administrateur';
+    }
+
     const demoPassword = 'TicketPlus2026!';
 
     // Rechercher si l'utilisateur existe déjà
@@ -13,7 +31,9 @@ export async function POST() {
     let userId: string | null = null;
 
     if (!listError && usersList?.users) {
-      const existingUser = usersList.users.find(u => u.email?.toLowerCase() === demoEmail.toLowerCase());
+      const existingUser = usersList.users.find(
+        (u) => u.email?.toLowerCase() === demoEmail.toLowerCase()
+      );
       if (existingUser) {
         userId = existingUser.id;
         // S'assurer que le mot de passe est synchronisé et l'email confirmé
@@ -25,14 +45,14 @@ export async function POST() {
     }
 
     if (!userId) {
-      // Créer le compte démo pré-confirmé (sans envoi d'email, évite le rate limit SMTP)
+      // Créer le compte démo pré-confirmé
       const { data: newUser, error: createError } = await admin.auth.admin.createUser({
         email: demoEmail,
         password: demoPassword,
         email_confirm: true,
         user_metadata: {
-          first_name: 'Koffi',
-          last_name: 'Dossou',
+          first_name: firstName,
+          last_name: lastName,
           phone: '01 64 28 90',
         },
       });
@@ -45,15 +65,15 @@ export async function POST() {
       userId = newUser.user.id;
     }
 
-    // Synchroniser dans la table publique 'users'
+    // Synchroniser dans la table publique 'users' avec le rôle spécifié
     if (userId) {
       await (admin.from('users') as any).upsert({
         id: userId,
         email: demoEmail,
         phone: '01 64 28 90',
-        first_name: 'Koffi',
-        last_name: 'Dossou',
-        role: 'traveler',
+        first_name: firstName,
+        last_name: lastName,
+        role: requestedRole,
         preferences: {
           city: 'Cotonou',
           idType: 'cni',
@@ -63,38 +83,13 @@ export async function POST() {
         },
         updated_at: new Date().toISOString(),
       });
-
-      // S'assurer que le voyageur démo a des notifications d'exemple
-      const { data: existingNotifs } = await admin
-        .from('notifications')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-
-      if (!existingNotifs || existingNotifs.length === 0) {
-        await (admin.from('notifications') as any).insert([
-          {
-            user_id: userId,
-            title: 'Bienvenue sur Ticket+ !',
-            message: 'Votre compte voyageur démo est actif. Explorez toutes les fonctionnalités.',
-            type: 'system',
-            is_read: true,
-          },
-          {
-            user_id: userId,
-            title: 'Départ confirmé : Cotonou ➔ Parakou',
-            message: 'Votre bus Confort Lines partira à 07h00. Présentez-vous 30min avant au guichet.',
-            type: 'booking',
-            is_read: false,
-          },
-        ]);
-      }
     }
 
     return NextResponse.json({
       success: true,
       email: demoEmail,
       password: demoPassword,
+      role: requestedRole,
     });
   } catch (err: any) {
     console.error('API demo auth error:', err);
