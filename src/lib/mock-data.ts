@@ -28,8 +28,15 @@ export interface Trip {
   date: string;
   features: string[];
   availableSeats: number;
-  totalSeats: number;
-  disabledSeats: number[];
+  totalSeats?: number;
+  disabledSeats?: number[];
+  companyName?: string;
+  companySubtitle?: string;
+  companyColor?: string;
+  from?: string;
+  to?: string;
+  departureStation?: string;
+  arrivalStation?: string;
 }
 
 export const STATIONS: Station[] = [

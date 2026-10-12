@@ -1,58 +1,96 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useBookingStore } from '@/stores/bookingStore';
-import { COMPANIES, STATIONS } from '@/lib/mock-data';
 import { useLocale } from 'next-intl';
+
+interface SeatData {
+  id: string;
+  seat_number: number;
+  status: 'available' | 'reserved' | 'sold';
+}
 
 export default function BookingPage() {
   const params = useParams();
   const locale = useLocale();
   const router = useRouter();
-  const tripId = params.id;
+  const tripId = params.id as string;
   
   const { selectedTrip, setPassengerInfo, setExtras, setPaymentMethod: setStorePaymentMethod, selectSeats } = useBookingStore();
   
-  const [selectedSeat, setSelectedSeat] = useState<string>("12");
+  const [selectedSeat, setSelectedSeat] = useState<string>("01");
   const [extraLuggage, setExtraLuggage] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("mtn");
+  const [seats, setSeats] = useState<SeatData[]>([]);
+  const [isLoadingSeats, setIsLoadingSeats] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  React.useEffect(() => {
+  // Redirect if no trip selected
+  useEffect(() => {
     if (!selectedTrip) {
       router.push(`/${locale}/resultats`);
     }
   }, [selectedTrip, router, locale]);
 
-  React.useEffect(() => {
-    if (selectedTrip) {
-      const disabledList = Array.isArray(selectedTrip.disabledSeats) ? selectedTrip.disabledSeats : [2, 5, 12, 19, 23];
-      const disabledSeats = disabledList.map((s: any) => s.toString().padStart(2, '0'));
-      if (disabledSeats.includes(selectedSeat)) {
-        const allSeats = Array.from({length: 32}, (_, i) => (i + 1).toString().padStart(2, '0'));
-        const firstFree = allSeats.find(s => !disabledSeats.includes(s));
-        if (firstFree) setSelectedSeat(firstFree);
-      }
+  // Fetch seats from Supabase API
+  const fetchSeats = useCallback(async () => {
+    if (!tripId || tripId.startsWith('sched-')) {
+      // Schedule-based trips don't have real seats in DB yet
+      setIsLoadingSeats(false);
+      return;
     }
-  }, [selectedTrip, selectedSeat]);
+    try {
+      setIsLoadingSeats(true);
+      const res = await fetch(`/api/trips/${tripId}/seats`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.seats && data.seats.length > 0) {
+          setSeats(data.seats);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch seats:', err);
+    } finally {
+      setIsLoadingSeats(false);
+    }
+  }, [tripId]);
+
+  useEffect(() => {
+    fetchSeats();
+  }, [fetchSeats]);
+
+  // Compute disabled seats from Supabase or fallback
+  const disabledSeatNumbers: string[] = React.useMemo(() => {
+    if (seats.length > 0) {
+      return seats
+        .filter(s => s.status !== 'available')
+        .map(s => s.seat_number.toString().padStart(2, '0'));
+    }
+    // Fallback for schedule-based trips
+    const disabledList = Array.isArray(selectedTrip?.disabledSeats) ? selectedTrip!.disabledSeats : [2, 5, 12, 19, 23];
+    return disabledList.map((s: any) => s.toString().padStart(2, '0'));
+  }, [seats, selectedTrip]);
+
+  // Auto-select first free seat
+  useEffect(() => {
+    if (disabledSeatNumbers.includes(selectedSeat)) {
+      const allSeats = Array.from({length: 32}, (_, i) => (i + 1).toString().padStart(2, '0'));
+      const firstFree = allSeats.find(s => !disabledSeatNumbers.includes(s));
+      if (firstFree) setSelectedSeat(firstFree);
+    }
+  }, [disabledSeatNumbers, selectedSeat]);
 
   if (!selectedTrip) {
     return <div className="p-8 text-center text-on-surface">Redirection vers les résultats...</div>;
   }
 
-  const company = COMPANIES.find(c => c.id === selectedTrip.companyId) || {
-    name: selectedTrip.companyName || 'Compagnie Partenaire',
-    subtitle: selectedTrip.companySubtitle || 'Transport de voyageurs',
-  };
-  const companyName = company.name;
+  const companyName = selectedTrip.companyName || 'Compagnie Partenaire';
   const carName = `Autocar ${companyName}`;
   const bannerImg = "/images/bus-banner.jpg";
-  
-  const disabledList = Array.isArray(selectedTrip.disabledSeats) ? selectedTrip.disabledSeats : [2, 5, 12, 19, 23];
-  const disabledSeats = disabledList.map((s: any) => s.toString().padStart(2, '0'));
 
-  const from = selectedTrip.from || STATIONS.find(s => s.id === selectedTrip.departureStationId)?.city || 'Cotonou';
-  const to = selectedTrip.to || STATIONS.find(s => s.id === selectedTrip.arrivalStationId)?.city || 'Parakou';
+  const from = selectedTrip.from || 'Cotonou';
+  const to = selectedTrip.to || 'Parakou';
   const dateParam = selectedTrip.date || new Date().toISOString().split('T')[0];
 
   const basePrice = selectedTrip.price;
@@ -63,32 +101,69 @@ export default function BookingPage() {
     setSelectedSeat(seat);
   };
   
-  const handlePaymentSubmit = () => {
+  const handlePaymentSubmit = async () => {
     const nameEl = document.getElementById('fullName') as HTMLInputElement;
     const phoneEl = document.getElementById('phone') as HTMLInputElement;
     const emailEl = document.getElementById('email') as HTMLInputElement;
     
-    setPassengerInfo({
-      firstName: nameEl?.value.split(' ')[0] || 'Voyageur',
-      lastName: nameEl?.value.split(' ').slice(1).join(' ') || '',
-      phone: phoneEl?.value || '',
-      idType: 'cni'
-    });
-    
+    const firstName = nameEl?.value.split(' ')[0] || 'Voyageur';
+    const lastName = nameEl?.value.split(' ').slice(1).join(' ') || '';
+    const phone = phoneEl?.value || '';
+
+    setPassengerInfo({ firstName, lastName, phone, idType: 'cni' });
     setExtras(extraLuggage, true);
     setStorePaymentMethod(paymentMethod);
     selectSeats([parseInt(selectedSeat, 10)]);
 
+    // Try to create booking via Supabase API
+    if (!tripId.startsWith('sched-') && seats.length > 0) {
+      setIsSubmitting(true);
+      try {
+        const seatObj = seats.find(s => s.seat_number === parseInt(selectedSeat, 10));
+        if (seatObj) {
+          const res = await fetch('/api/bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              trip_id: tripId,
+              seat_id: seatObj.id,
+              passenger_first_name: firstName,
+              passenger_last_name: lastName,
+              passenger_phone: phone,
+              has_baggage: extraLuggage,
+              is_flexible: true,
+              total_price: totalPrice,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.booking) {
+            // Booking created successfully in Supabase
+            const confirmParams = new URLSearchParams({
+              from, to, date: dateParam, seat: selectedSeat,
+              payment: paymentMethod, price: totalPrice.toString(),
+              name: nameEl?.value || 'Voyageur', phone,
+              company: companyName, ref: data.booking.booking_reference || '',
+            }).toString();
+            router.push(`/${locale}/reservation/confirmation?${confirmParams}`);
+            return;
+          }
+          // If 401 (not logged in), continue with client-side flow
+          if (res.status !== 401) {
+            console.error('Booking API error:', data.error);
+          }
+        }
+      } catch (err) {
+        console.error('Booking submission error:', err);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
+    // Fallback: redirect to confirmation without server booking
     const confirmParams = new URLSearchParams({
-      from,
-      to,
-      date: dateParam,
-      seat: selectedSeat,
-      payment: paymentMethod,
-      price: totalPrice.toString(),
-      name: nameEl?.value || 'Voyageur',
-      phone: phoneEl?.value || '',
-      company: companyName
+      from, to, date: dateParam, seat: selectedSeat,
+      payment: paymentMethod, price: totalPrice.toString(),
+      name: nameEl?.value || 'Voyageur', phone, company: companyName,
     }).toString();
     router.push(`/${locale}/reservation/confirmation?${confirmParams}`);
   };
@@ -139,7 +214,9 @@ export default function BookingPage() {
                   <span>{carName}</span>
                 </div>
                 <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold tracking-tight">Configuration Sièges</h2>
-                <p className="font-body-md text-body-md text-on-surface-variant">Sélectionnez votre emplacement à bord</p>
+                <p className="font-body-md text-body-md text-on-surface-variant">
+                  {isLoadingSeats ? 'Chargement des places disponibles...' : 'Sélectionnez votre emplacement à bord'}
+                </p>
               </div>
               <div className="text-right">
                 <span className="font-label-sm text-label-sm text-on-surface-variant block uppercase tracking-wider font-semibold">Choisi</span>
@@ -178,11 +255,10 @@ export default function BookingPage() {
                 </div>
                 
                 <div className="text-center font-label-sm text-label-sm text-outline uppercase tracking-wider mb-2">
-                  Avant de l'autocar
+                  Avant de l&apos;autocar
                 </div>
                 
                 <div className="space-y-2.5 font-label-md text-label-md">
-                  {/* Rows Generation */}
                   {[
                     { row: 1, seats: ["01", "02", "03", "04"] },
                     { row: 2, seats: ["05", "06", "07", "08"] },
@@ -197,10 +273,10 @@ export default function BookingPage() {
                         {r.seats.slice(0, 2).map((seat) => (
                           <button
                             key={seat}
-                            disabled={disabledSeats.includes(seat)}
+                            disabled={disabledSeatNumbers.includes(seat)}
                             onClick={() => handleSeatClick(seat)}
                             className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-                              disabledSeats.includes(seat) 
+                              disabledSeatNumbers.includes(seat) 
                                 ? 'bg-surface-container-high text-outline cursor-not-allowed' 
                                 : selectedSeat === seat 
                                   ? 'bg-secondary text-on-secondary shadow-md font-bold' 
@@ -208,19 +284,12 @@ export default function BookingPage() {
                             }`}
                             type="button"
                           >
-                            {disabledSeats.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
+                            {disabledSeatNumbers.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
                           </button>
                         ))}
                       </div>
                       <div className={`w-6 text-center font-label-sm text-label-sm ${
-                        ['09','10','11','12'].some(s => selectedSeat === s) && r.row === 3 
-                        || ['13','14','15','16'].some(s => selectedSeat === s) && r.row === 4 
-                        || ['17','18','19','20'].some(s => selectedSeat === s) && r.row === 5 
-                        || ['21','22','23','24'].some(s => selectedSeat === s) && r.row === 6
-                        || ['25','26','27','28'].some(s => selectedSeat === s) && r.row === 7
-                        || ['01','02','03','04'].some(s => selectedSeat === s) && r.row === 1
-                        || ['05','06','07','08'].some(s => selectedSeat === s) && r.row === 2
-                        ? 'text-secondary font-bold' : 'text-outline-variant'
+                        r.seats.some(s => selectedSeat === s) ? 'text-secondary font-bold' : 'text-outline-variant'
                       }`}>
                         R{r.row}
                       </div>
@@ -228,10 +297,10 @@ export default function BookingPage() {
                         {r.seats.slice(2, 4).map((seat) => (
                           <button
                             key={seat}
-                            disabled={disabledSeats.includes(seat)}
+                            disabled={disabledSeatNumbers.includes(seat)}
                             onClick={() => handleSeatClick(seat)}
                             className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-                              disabledSeats.includes(seat) 
+                              disabledSeatNumbers.includes(seat) 
                                 ? 'bg-surface-container-high text-outline cursor-not-allowed' 
                                 : selectedSeat === seat 
                                   ? 'bg-secondary text-on-secondary shadow-md font-bold' 
@@ -239,7 +308,7 @@ export default function BookingPage() {
                             }`}
                             type="button"
                           >
-                            {disabledSeats.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
+                            {disabledSeatNumbers.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
                           </button>
                         ))}
                       </div>
@@ -252,10 +321,10 @@ export default function BookingPage() {
                       {["29", "30"].map((seat) => (
                         <button
                           key={seat}
-                          disabled={disabledSeats.includes(seat)}
+                          disabled={disabledSeatNumbers.includes(seat)}
                           onClick={() => handleSeatClick(seat)}
                           className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-                            disabledSeats.includes(seat)
+                            disabledSeatNumbers.includes(seat)
                               ? 'bg-surface-container-high text-outline cursor-not-allowed' 
                               : selectedSeat === seat 
                                 ? 'bg-secondary text-on-secondary shadow-md font-bold' 
@@ -263,7 +332,7 @@ export default function BookingPage() {
                           }`}
                           type="button"
                         >
-                          {disabledSeats.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
+                          {disabledSeatNumbers.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
                         </button>
                       ))}
                     </div>
@@ -272,10 +341,10 @@ export default function BookingPage() {
                       {["31", "32"].map((seat) => (
                         <button
                           key={seat}
-                          disabled={disabledSeats.includes(seat)}
+                          disabled={disabledSeatNumbers.includes(seat)}
                           onClick={() => handleSeatClick(seat)}
                           className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
-                            disabledSeats.includes(seat)
+                            disabledSeatNumbers.includes(seat)
                               ? 'bg-surface-container-high text-outline cursor-not-allowed' 
                               : selectedSeat === seat 
                                 ? 'bg-secondary text-on-secondary shadow-md font-bold' 
@@ -283,7 +352,7 @@ export default function BookingPage() {
                           }`}
                           type="button"
                         >
-                          {disabledSeats.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
+                          {disabledSeatNumbers.includes(seat) ? <span className="material-symbols-outlined text-[14px]">lock</span> : seat}
                         </button>
                       ))}
                     </div>
@@ -291,7 +360,7 @@ export default function BookingPage() {
                 </div>
                 
                 <div className="text-center font-label-sm text-label-sm text-outline uppercase tracking-wider mt-3">
-                  Arrière de l'autocar
+                  Arrière de l&apos;autocar
                 </div>
               </div>
             </div>
@@ -334,7 +403,7 @@ export default function BookingPage() {
                   <div className="font-body-md text-body-md font-semibold text-on-surface">{from}</div>
                   <div className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1 mt-0.5">
                     <span className="material-symbols-outlined text-[14px] text-secondary">location_on</span>
-                    {STATIONS.find(s => s.id === selectedTrip.departureStationId)?.name || 'Gare'}
+                    {selectedTrip.departureStation || `Gare ${from}`}
                   </div>
                 </div>
                 <div className="md:col-span-2 flex flex-col items-center justify-center my-1 md:my-0">
@@ -351,7 +420,7 @@ export default function BookingPage() {
                   <div className="font-body-md text-body-md font-semibold text-on-surface">{to}</div>
                   <div className="font-label-sm text-label-sm text-on-surface-variant flex items-center md:justify-end gap-1 mt-0.5">
                     <span className="material-symbols-outlined text-[14px] text-secondary">pin_drop</span>
-                    Terminus {companyName.split(" ")[0]}
+                    {selectedTrip.arrivalStation || `Terminus ${companyName.split(" ")[0]}`}
                   </div>
                 </div>
               </div>
@@ -364,7 +433,7 @@ export default function BookingPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
                 <div className="space-y-1 md:col-span-2">
-                  <label className="block font-label-md text-label-md font-semibold text-on-surface" htmlFor="fullName">Nom complet (selon pièce d'identité) *</label>
+                  <label className="block font-label-md text-label-md font-semibold text-on-surface" htmlFor="fullName">Nom complet (selon pièce d&apos;identité) *</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3.5 top-3 text-[18px] text-on-surface-variant">badge</span>
                     <input className="w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-xl pl-10 pr-4 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none border border-transparent focus:border-outline-variant" id="fullName" placeholder="Ex: BIO TCHANE Koffi" type="text" defaultValue="Koffi Christian DOSSOU" />
@@ -405,7 +474,7 @@ export default function BookingPage() {
                     </div>
                     <div>
                       <div className="font-body-md text-body-md font-semibold text-on-surface">Bagage standard en soute</div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">1 valise (jusqu'à 25 kg) + 1 sac à dos cabine</div>
+                      <div className="font-label-sm text-label-sm text-on-surface-variant">1 valise (jusqu&apos;à 25 kg) + 1 sac à dos cabine</div>
                     </div>
                   </div>
                   <span className="font-label-md text-label-md font-bold text-secondary bg-secondary-container/50 px-2.5 py-1 rounded-full">Inclus</span>
@@ -433,7 +502,6 @@ export default function BookingPage() {
                   </div>
                 </label>
                 
-                {/* Option Flexibilité ajoutée tel que demandé par l'utilisateur */}
                 <div className="flex items-center justify-between p-space-sm rounded-xl bg-surface-container-low">
                   <div className="flex items-center gap-space-sm">
                     <div className="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
@@ -441,7 +509,7 @@ export default function BookingPage() {
                     </div>
                     <div>
                       <div className="font-body-md text-body-md font-semibold text-on-surface">Flexibilité Annulation</div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">Annulation et remboursement (frais: 300 FCFA) jusqu'à 2 jours avant le départ</div>
+                      <div className="font-label-sm text-label-sm text-on-surface-variant">Annulation et remboursement (frais: 300 FCFA) jusqu&apos;à 2 jours avant le départ</div>
                     </div>
                   </div>
                   <span className="font-label-md text-label-md font-bold text-secondary bg-secondary-container/50 px-2.5 py-1 rounded-full">Inclus</span>
@@ -533,17 +601,27 @@ export default function BookingPage() {
             <div className="space-y-space-sm">
               <button 
                 onClick={handlePaymentSubmit}
-                className="w-full bg-primary hover:bg-primary-container text-on-primary py-3.5 px-space-md rounded-xl font-body-lg text-body-lg font-bold flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99]" 
+                disabled={isSubmitting}
+                className="w-full bg-primary hover:bg-primary-container text-on-primary py-3.5 px-space-md rounded-xl font-body-lg text-body-lg font-bold flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed" 
                 type="button"
               >
-                <span className="material-symbols-outlined text-[20px]">lock</span>
-                <span>Confirmer et Payer ({totalPrice.toLocaleString('fr-FR')} FCFA)</span>
-                <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                {isSubmitting ? (
+                  <>
+                    <span className="material-symbols-outlined text-[20px] animate-spin">progress_activity</span>
+                    <span>Traitement en cours...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[20px]">lock</span>
+                    <span>Confirmer et Payer ({totalPrice.toLocaleString('fr-FR')} FCFA)</span>
+                    <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                  </>
+                )}
               </button>
               <div className="flex items-start gap-2 bg-surface-container-low p-space-sm rounded-lg text-label-sm font-label-sm text-on-surface-variant">
                 <span className="material-symbols-outlined text-[16px] text-secondary mt-0.5">verified</span>
                 <div>
-                  <strong>Garantie Ticket+ et Annulation Flexible :</strong> Annulation et remboursement à 100% sans frais jusqu'à 2 jours avant le départ. Service client WhatsApp actif 24h/7j.
+                  <strong>Garantie Ticket+ et Annulation Flexible :</strong> Annulation et remboursement à 100% sans frais jusqu&apos;à 2 jours avant le départ. Service client WhatsApp actif 24h/7j.
                 </div>
               </div>
             </div>
@@ -557,7 +635,7 @@ export default function BookingPage() {
             </div>
             <div>
               <div className="font-title-md text-title-md font-bold text-on-surface">Une question sur ce départ ?</div>
-              <div className="font-body-md text-body-md text-on-surface-variant">L'équipe d'embarquement Ticket+ Cotonou est joignable directement par téléphone.</div>
+              <div className="font-body-md text-body-md text-on-surface-variant">L&apos;équipe d&apos;embarquement Ticket+ Cotonou est joignable directement par téléphone.</div>
             </div>
           </div>
           <div className="flex items-center gap-space-sm w-full md:w-auto">

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
+import { createClient } from '@/lib/supabase/client';
 
 interface Ticket {
   id: string;
@@ -16,13 +17,8 @@ interface Ticket {
   status: 'confirmed' | 'completed' | 'cancelled';
   passenger: string;
   payment: string;
+  companyName: string;
 }
-
-const MOCK_TICKETS: Ticket[] = [
-  { id: '1', ref: 'TK-2026-4821', from: 'Cotonou', to: 'Parakou', date: '2026-09-25', departure: '07:00', seat: '07', price: 6500, status: 'confirmed', passenger: 'Koffi Dossou', payment: 'MTN MoMo' },
-  { id: '2', ref: 'TK-2026-3190', from: 'Cotonou', to: 'Bohicon', date: '2026-09-20', departure: '09:30', seat: '12', price: 3500, status: 'completed', passenger: 'Koffi Dossou', payment: 'Moov Money' },
-  { id: '3', ref: 'TK-2026-2744', from: 'Parakou', to: 'Natitingou', date: '2026-09-15', departure: '06:00', seat: '03', price: 4000, status: 'cancelled', passenger: 'Koffi Dossou', payment: 'MTN MoMo' },
-];
 
 const STATUS_MAP = {
   confirmed: { label: 'Confirmé', color: 'bg-[#ECFDF5] text-[#059669] border-[#10B981]/20', icon: 'check_circle' },
@@ -30,12 +26,72 @@ const STATUS_MAP = {
   cancelled: { label: 'Annulé', color: 'bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]', icon: 'cancel' },
 };
 
+// Map booking status to ticket status
+function mapStatus(status: string): 'confirmed' | 'completed' | 'cancelled' {
+  if (status === 'confirmed' || status === 'pending') return 'confirmed';
+  if (status === 'cancelled') return 'cancelled';
+  return 'completed';
+}
+
 export default function MonBilletPage() {
   const locale = useLocale();
   const [searchRef, setSearchRef] = useState('');
   const [filter, setFilter] = useState<'all' | 'confirmed' | 'completed' | 'cancelled'>('all');
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
-  const filtered = MOCK_TICKETS
+  const fetchBookings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/bookings');
+      if (res.status === 401) {
+        setIsLoggedIn(false);
+        setTickets([]);
+        return;
+      }
+      setIsLoggedIn(true);
+      const data = await res.json();
+      
+      if (data.bookings && data.bookings.length > 0) {
+        const mapped: Ticket[] = data.bookings.map((b: any) => ({
+          id: b.id,
+          ref: b.booking_reference || `TK-${b.id.slice(0, 8).toUpperCase()}`,
+          from: b.trip?.route?.departure_station?.city || 'Cotonou',
+          to: b.trip?.route?.arrival_station?.city || 'Parakou',
+          date: b.trip?.trip_date || new Date(b.created_at).toISOString().split('T')[0],
+          departure: (b.trip?.departure_time || '07:00').substring(0, 5),
+          seat: b.seat?.seat_number?.toString().padStart(2, '0') || '01',
+          price: b.total_price || 0,
+          status: mapStatus(b.status),
+          passenger: `${b.passenger_first_name || ''} ${b.passenger_last_name || ''}`.trim(),
+          payment: b.payment?.method || 'Mobile Money',
+          companyName: b.trip?.route?.company?.name || 'Compagnie',
+        }));
+        setTickets(mapped);
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to fetch bookings:', err);
+    }
+    
+    // If no bookings from API or error, check if user is logged in
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
+    } catch {
+      setIsLoggedIn(false);
+    }
+    
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchBookings().finally(() => setIsLoading(false));
+  }, [fetchBookings]);
+
+  const filtered = tickets
     .filter(t => filter === 'all' || t.status === filter)
     .filter(t => !searchRef || t.ref.toLowerCase().includes(searchRef.toLowerCase()));
 
@@ -94,7 +150,23 @@ export default function MonBilletPage() {
       {/* Tickets List */}
       <section className="px-4 sm:px-6 pb-8">
         <div className="max-w-[1140px] mx-auto space-y-4">
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
+              <span className="material-symbols-outlined text-[48px] text-[#10B981] block mb-3 animate-spin">progress_activity</span>
+              <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Chargement de vos billets...</h3>
+              <p className="text-[13px] text-[#64748B]">Veuillez patienter un instant.</p>
+            </div>
+          ) : isLoggedIn === false ? (
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
+              <span className="material-symbols-outlined text-[48px] text-[#F59E0B] block mb-3">login</span>
+              <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Connectez-vous pour voir vos billets</h3>
+              <p className="text-[13px] text-[#64748B] mb-4">Créez un compte ou connectez-vous pour accéder à votre historique de réservations.</p>
+              <Link href={`/${locale}/profil`} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F172A] text-white text-[13px] font-semibold hover:bg-[#1E293B] transition-all">
+                <span className="material-symbols-outlined text-[18px]">person</span>
+                Se connecter / S&apos;inscrire
+              </Link>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
               <span className="material-symbols-outlined text-[48px] text-[#CBD5E1] block mb-3">confirmation_number</span>
               <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Aucun billet trouvé</h3>
@@ -119,7 +191,7 @@ export default function MonBilletPage() {
                         </div>
                         <div>
                           <div className="text-[16px] font-bold text-[#0F172A]">{ticket.from} → {ticket.to}</div>
-                          <div className="text-[12px] text-[#94A3B8]">Confort Lines • Réf. <strong>{ticket.ref}</strong></div>
+                          <div className="text-[12px] text-[#94A3B8]">{ticket.companyName} • Réf. <strong>{ticket.ref}</strong></div>
                         </div>
                       </div>
                       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold border ${st.color}`}>

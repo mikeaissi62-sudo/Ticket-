@@ -117,6 +117,19 @@ export const Header = () => {
             </Link>
 
             <Link
+              href={`/${locale}/notifications`}
+              prefetch={true}
+              aria-label="Notifications"
+              className={`hidden sm:flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90 duration-75 shrink-0 ${
+                isActive(`/${locale}/notifications`)
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">notifications</span>
+            </Link>
+
+            <Link
               href={`/${locale}/profil`}
               prefetch={true}
               aria-label="Espace Profil Voyageur"
@@ -194,6 +207,19 @@ export const Header = () => {
               }`}
             >
               Contact
+            </Link>
+            <Link 
+              href={`/${locale}/notifications`} 
+              prefetch={true}
+              onClick={() => setMobileMenuOpen(false)} 
+              className={`px-4 py-3 rounded-xl font-body-md text-body-md flex items-center gap-2 active:scale-98 transition-all duration-75 ${
+                isActive(`/${locale}/notifications`)
+                  ? 'bg-primary-container/30 text-primary font-bold'
+                  : 'text-on-surface-variant hover:bg-surface-container font-medium'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">notifications</span>
+              Notifications
             </Link>
             <Link 
               href={`/${locale}/profil`} 

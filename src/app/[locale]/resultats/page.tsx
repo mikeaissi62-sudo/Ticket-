@@ -465,6 +465,7 @@ export default function ResultsPage() {
                           departureStationId: trip.departureStationId,
                           arrivalStationId: trip.arrivalStationId,
                           availableSeats: trip.availableSeats,
+                          totalSeats: trip.totalSeats || 45,
                           disabledSeats: trip.disabledSeats || [2, 5, 12, 19, 23],
                           from: from,
                           to: to,

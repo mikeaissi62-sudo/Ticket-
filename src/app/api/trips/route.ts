@@ -134,17 +134,26 @@ export async function GET(request: NextRequest) {
     }
 
     // Filtrer par ville de départ et d'arrivée
-    const matchingSchedules = schedules?.filter((s) => {
-      const depCity = s.route?.departure_station?.city?.toLowerCase();
-      const arrCity = s.route?.arrival_station?.city?.toLowerCase();
+    const matchingSchedules = (schedules as any[])?.filter((s: any) => {
+      const r = Array.isArray(s.route) ? s.route[0] : s.route;
+      const depStation = Array.isArray(r?.departure_station) ? r.departure_station[0] : r?.departure_station;
+      const arrStation = Array.isArray(r?.arrival_station) ? r.arrival_station[0] : r?.arrival_station;
+      const comp = Array.isArray(r?.company) ? r.company[0] : r?.company;
+      const depCity = depStation?.city?.toLowerCase();
+      const arrCity = arrStation?.city?.toLowerCase();
       const matchCity = depCity === from.toLowerCase() && arrCity === to.toLowerCase();
-      return matchCity && s.route?.company?.is_active === true;
+      return matchCity && comp?.is_active === true;
     }) || [];
 
     // Formater les départs depuis les horaires réels de Supabase
-    const formatted = matchingSchedules.map((s, idx) => {
+    const formatted = matchingSchedules.map((s: any, idx: number) => {
+      const r = Array.isArray(s.route) ? s.route[0] : s.route;
+      const depStation = Array.isArray(r?.departure_station) ? r.departure_station[0] : r?.departure_station;
+      const arrStation = Array.isArray(r?.arrival_station) ? r.arrival_station[0] : r?.arrival_station;
+      const comp = Array.isArray(r?.company) ? r.company[0] : r?.company;
+
       const depTime = (s.departure_time || '07:00').substring(0, 5);
-      const durationMins = s.route?.duration_minutes || 360;
+      const durationMins = r?.duration_minutes || 360;
       const [depH, depM] = depTime.split(':').map(Number);
       const totalDepMins = depH * 60 + depM;
       const totalArrMins = totalDepMins + durationMins;
@@ -160,23 +169,23 @@ export async function GET(request: NextRequest) {
 
       return {
         id: `sched-${s.id}-${date}`,
-        companyId: s.route?.company?.id,
-        companyName: s.route?.company?.name,
-        companySlug: s.route?.company?.slug,
-        companySubtitle: s.route?.company?.subtitle || 'Transporteur certifié',
-        isPartnerOfficial: s.route?.company?.is_official_partner ?? false,
-        rating: s.route?.company?.rating || 4.5,
-        price: s.route?.base_price || 6500,
+        companyId: comp?.id,
+        companyName: comp?.name,
+        companySlug: comp?.slug,
+        companySubtitle: comp?.subtitle || 'Transporteur certifié',
+        isPartnerOfficial: comp?.is_official_partner ?? false,
+        rating: comp?.rating || 4.5,
+        price: r?.base_price || 6500,
         departureTime: depTime,
         arrivalTime: arrTime,
         duration: durationStr,
-        departureStation: s.route?.departure_station?.name || `Gare ${from}`,
-        arrivalStation: s.route?.arrival_station?.name || `Gare ${to}`,
-        departureStationId: s.route?.departure_station?.id,
-        arrivalStationId: s.route?.arrival_station?.id,
+        departureStation: depStation?.name || `Gare ${from}`,
+        arrivalStation: arrStation?.name || `Gare ${to}`,
+        departureStationId: depStation?.id,
+        arrivalStationId: arrStation?.id,
         availableSeats: mockSeatsLeft,
-        busType: s.route?.features?.includes('vip') ? 'VIP' : 'Confort',
-        features: s.route?.features || ['ac', 'wifi'],
+        busType: r?.features?.includes('vip') ? 'VIP' : 'Confort',
+        features: r?.features || ['ac', 'wifi'],
         isLiveSupabase: true,
       };
     });
