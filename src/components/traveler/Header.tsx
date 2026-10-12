@@ -4,28 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { usePathname } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth';
 
 export const Header = () => {
   const locale = useLocale();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const [supabase] = useState(() => createClient());
-  const [user, setUser] = useState<{ id: string } | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase]);
+  const { user } = useAuth();
 
   const isActive = (path: string) => {
     if (path === `/${locale}`) {
@@ -155,38 +140,21 @@ export const Header = () => {
               <span className="material-symbols-outlined text-[20px]">notifications</span>
             </Link>
 
-            {/* Profil / Connexion Button */}
-            {user ? (
-              <Link
-                href={`/${locale}/profil`}
-                prefetch={true}
-                aria-label="Mon Profil"
-                title="Mon Profil"
-                className={`hidden sm:flex h-10 px-3 items-center justify-center gap-1.5 rounded-xl transition-all active:scale-95 duration-75 shrink-0 ${
-                  isActive(`/${locale}/profil`)
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">person</span>
-                <span className="text-[12px] font-bold">Profil</span>
-              </Link>
-            ) : (
-              <Link
-                href={`/${locale}/login`}
-                prefetch={true}
-                aria-label="Se connecter"
-                title="Connexion / Inscription"
-                className={`hidden sm:flex h-10 px-3.5 items-center justify-center gap-1.5 rounded-xl transition-all active:scale-95 duration-75 shrink-0 ${
-                  isActive(`/${locale}/login`)
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40 font-bold text-[12px]'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">login</span>
-                <span>Connexion</span>
-              </Link>
-            )}
+            {/* Profil Button */}
+            <Link
+              href={`/${locale}/profil`}
+              prefetch={true}
+              aria-label="Mon Profil"
+              title={user ? 'Mon Profil' : 'Profil / Connexion'}
+              className={`hidden sm:flex h-10 px-3.5 items-center justify-center gap-1.5 rounded-xl transition-all active:scale-95 duration-75 shrink-0 ${
+                isActive(`/${locale}/profil`) || isActive(`/${locale}/login`)
+                  ? 'bg-primary text-on-primary font-bold shadow-sm'
+                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40 font-bold text-[12px]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">person</span>
+              <span>{user ? 'Profil' : 'Profil'}</span>
+            </Link>
 
             {/* Mobile menu hamburger button */}
             <button
@@ -293,17 +261,17 @@ export const Header = () => {
                 Notifications
               </Link>
               <Link 
-                href={user ? `/${locale}/profil` : `/${locale}/login`} 
+                href={`/${locale}/profil`} 
                 prefetch={true}
                 onClick={() => setMobileMenuOpen(false)} 
                 className={`px-4 py-3 rounded-xl text-[14px] font-semibold flex items-center gap-3 active:scale-98 transition-all duration-75 ${
-                  isActive(user ? `/${locale}/profil` : `/${locale}/login`)
+                  isActive(`/${locale}/profil`) || isActive(`/${locale}/login`)
                     ? 'bg-primary/10 text-primary font-bold'
                     : 'text-[#475569] hover:bg-surface-container'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">{user ? 'person' : 'login'}</span>
-                {user ? 'Mon Profil' : 'Connexion / Inscription'}
+                <span className="material-symbols-outlined text-[20px]">person</span>
+                {user ? 'Mon Profil' : 'Mon Profil'}
               </Link>
               <hr className="my-2 border-outline-variant/40" />
               <a 

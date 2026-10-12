@@ -72,12 +72,19 @@ export default function LoginPage() {
   // Se souvenir de moi
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Check if already logged in -> redirect directly to home
+  // Check if already logged in -> redirect directly to destination or home
   useEffect(() => {
     async function checkSession() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          const searchParams = new URLSearchParams(window.location.search);
+          const redirectParam = searchParams.get('redirect');
+          if (redirectParam) {
+            const cleanPath = redirectParam.replace(/^\/(fr|en)/, '');
+            router.replace(`/${locale}${cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath}`);
+            return;
+          }
           router.replace(`/${locale}`);
           return;
         }
@@ -105,12 +112,23 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [otpCountdown]);
 
-  // Redirection vers l'Accueil après connexion ou inscription
+  // Redirection vers l'Accueil ou la page demandée après connexion ou inscription
   const handleAuthSuccess = () => {
     try {
       localStorage.setItem('tp_remember_me', rememberMe ? '1' : '0');
     } catch {}
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectParam = searchParams.get('redirect');
+      if (redirectParam) {
+        const cleanPath = redirectParam.replace(/^\/(fr|en)/, '');
+        router.replace(`/${locale}${cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath}`);
+        router.refresh();
+        return;
+      }
+    } catch {}
     router.replace(`/${locale}`);
+    router.refresh();
   };
 
   // ===== PHONE OTP HANDLERS =====

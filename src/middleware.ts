@@ -11,7 +11,7 @@ const intlMiddleware = createIntlMiddleware({
 // 5.2 Middleware de Protection — Matrice des routes
 // ============================================================
 
-// Routes publiques : accueil, recherche, résultats, compagnies, tarifs, contact
+// Routes publiques : accueil, recherche, résultats, compagnies, tarifs, contact, billets, notifications, profil
 const PUBLIC_ROUTES = [
   '/',
   '/recherche',
@@ -19,16 +19,16 @@ const PUBLIC_ROUTES = [
   '/compagnies',
   '/tarifs-et-lignes',
   '/contact',
+  '/mon-billet',
+  '/notifications',
+  '/profil',
   '/login',
   '/register',
 ];
 
-// Routes protégées (voyageur) : réservation, mon-billet, profil, notifications
+// Routes protégées (voyageur) : réservation (flux de commande)
 const TRAVELER_PROTECTED_ROUTES = [
   '/reservation',
-  '/mon-billet',
-  '/profil',
-  '/notifications',
 ];
 
 // Routes protégées par rôle
