@@ -198,18 +198,18 @@ export interface BookingWithDetails extends Booking {
 
 // ---- Insert Types (for creating new records) ----
 
-export type UserInsert = Omit<User, 'id' | 'created_at' | 'updated_at'>;
-export type CompanyInsert = Omit<Company, 'id' | 'created_at' | 'updated_at'>;
-export type StationInsert = Omit<Station, 'id' | 'created_at'>;
-export type RouteInsert = Omit<Route, 'id' | 'created_at'>;
-export type ScheduleInsert = Omit<Schedule, 'id' | 'created_at'>;
-export type TripInsert = Omit<Trip, 'id' | 'created_at'>;
-export type BusInsert = Omit<Bus, 'id' | 'created_at'>;
-export type SeatInsert = Omit<Seat, 'id' | 'created_at'>;
-export type BookingInsert = Omit<Booking, 'id' | 'created_at' | 'updated_at' | 'booking_reference'>;
-export type PaymentInsert = Omit<Payment, 'id' | 'created_at'>;
-export type TicketInsert = Omit<Ticket, 'id'>;
-export type NotificationInsert = Omit<Notification, 'id' | 'created_at'>;
+export type UserInsert = Omit<User, 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string };
+export type CompanyInsert = Omit<Company, 'id' | 'created_at' | 'updated_at'> & { id?: string };
+export type StationInsert = Omit<Station, 'id' | 'created_at'> & { id?: string };
+export type RouteInsert = Omit<Route, 'id' | 'created_at'> & { id?: string };
+export type ScheduleInsert = Omit<Schedule, 'id' | 'created_at'> & { id?: string };
+export type TripInsert = Omit<Trip, 'id' | 'created_at'> & { id?: string };
+export type BusInsert = Omit<Bus, 'id' | 'created_at'> & { id?: string };
+export type SeatInsert = Omit<Seat, 'id' | 'created_at'> & { id?: string };
+export type BookingInsert = Omit<Booking, 'id' | 'created_at' | 'updated_at' | 'booking_reference'> & { id?: string; booking_reference?: string };
+export type PaymentInsert = Omit<Payment, 'id' | 'created_at'> & { id?: string };
+export type TicketInsert = Omit<Ticket, 'id'> & { id?: string };
+export type NotificationInsert = Omit<Notification, 'id' | 'created_at'> & { id?: string; is_read?: boolean; created_at?: string };
 
 // ---- Update Types ----
 

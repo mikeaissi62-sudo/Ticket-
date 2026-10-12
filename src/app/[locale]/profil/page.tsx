@@ -152,7 +152,7 @@ export default function ProfilPage() {
     }
   };
 
-  // Handle Register
+  // Handle Register (via /api/auth/register, pre-confirms without email rate limit)
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -165,43 +165,38 @@ export default function ProfilPage() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: authEmail,
-        password: authPassword,
-        options: {
-          data: {
-            first_name: authFirstName,
-            last_name: authLastName,
-            phone: authPhone,
-          },
-        },
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: authEmail,
+          password: authPassword,
+          firstName: authFirstName,
+          lastName: authLastName,
+          phone: authPhone,
+        }),
       });
 
-      if (error) {
-        setAuthError(error.message);
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setAuthError(data.error || "Erreur lors de l'inscription.");
+        setIsAuthLoading(false);
         return;
       }
 
-      if (data.user) {
-        // Also save profile into users table
-        await fetch('/api/profile', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            firstName: authFirstName,
-            lastName: authLastName,
-            phone: authPhone,
-            email: authEmail,
-            city: 'Cotonou',
-            idType: 'cni',
-            notifSms: true,
-            notifWhatsapp: true,
-            notifEmail: false,
-          }),
-        });
+      // Automatically sign in the newly registered pre-confirmed user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      });
 
-        await loadProfile();
+      if (signInError) {
+        setAuthError(signInError.message);
+        setIsAuthLoading(false);
+        return;
       }
+
+      await loadProfile();
     } catch {
       setAuthError("Erreur lors de l'inscription. Veuillez réessayer.");
     } finally {
@@ -209,43 +204,30 @@ export default function ProfilPage() {
     }
   };
 
-  // Quick Demo Login for testing
+  // Quick Demo Login for testing (via /api/auth/demo, pre-confirms without email rate limit)
   const handleDemoLogin = async () => {
     setAuthError(null);
     setIsAuthLoading(true);
-    const demoEmail = 'voyageur.demo@ticketplus.bj';
-    const demoPass = 'TicketPlus2026!';
 
     try {
+      const res = await fetch('/api/auth/demo', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setAuthError(data.error || 'Erreur lors de la configuration du compte démo.');
+        setIsAuthLoading(false);
+        return;
+      }
+
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPass,
+        email: data.email,
+        password: data.password,
       });
 
       if (signInError) {
-        // Create demo user if does not exist
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: demoEmail,
-          password: demoPass,
-          options: {
-            data: {
-              first_name: 'Koffi',
-              last_name: 'Dossou',
-              phone: '01 64 28 90',
-            },
-          },
-        });
-
-        if (signUpError) {
-          setAuthError(signUpError.message);
-          return;
-        }
-
-        // Try sign in again
-        await supabase.auth.signInWithPassword({
-          email: demoEmail,
-          password: demoPass,
-        });
+        setAuthError(signInError.message);
+        setIsAuthLoading(false);
+        return;
       }
 
       await loadProfile();
