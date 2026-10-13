@@ -47,7 +47,7 @@ export default function LoginPage() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authMethod, setAuthMethod] = useState<AuthMethod>('phone');
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
 
@@ -410,7 +410,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen py-6 sm:py-12 px-4 sm:px-6 flex items-center justify-center">
+    <div className="min-h-screen -mt-20 py-6 sm:py-12 px-4 sm:px-6 flex items-center justify-center">
       <div className="w-full max-w-[960px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         
         {/* Left Side: Brand presentation (Hidden on mobile or compact) */}

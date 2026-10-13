@@ -3,9 +3,16 @@
 import React from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
+import { usePathname } from 'next/navigation';
 
 export const Footer = () => {
   const locale = useLocale();
+  const pathname = usePathname();
+
+  // Ne pas afficher le Footer sur la page login ou register
+  if (pathname.includes('/login') || pathname.includes('/register')) {
+    return null;
+  }
 
   const todayStr = new Date().toISOString().split('T')[0];
   const buildSearchUrl = (from: string, to: string) => `/${locale}/resultats?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${todayStr}&passengers=1`;

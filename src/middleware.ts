@@ -11,25 +11,8 @@ const intlMiddleware = createIntlMiddleware({
 // 5.2 Middleware de Protection — Matrice des routes
 // ============================================================
 
-// Routes publiques : accueil, recherche, résultats, compagnies, tarifs, contact, billets, notifications, profil
-const PUBLIC_ROUTES = [
-  '/',
-  '/recherche',
-  '/resultats',
-  '/compagnies',
-  '/tarifs-et-lignes',
-  '/contact',
-  '/mon-billet',
-  '/notifications',
-  '/profil',
-  '/login',
-  '/register',
-];
-
-// Routes protégées (voyageur) : réservation (flux de commande)
-const TRAVELER_PROTECTED_ROUTES = [
-  '/reservation',
-];
+// Seules les pages de connexion et inscription sont accessibles sans authentification préalable
+const AUTH_PAGES = ['/login', '/register'];
 
 // Regex des routes de gestion
 const PARTNER_ROUTES = /^\/partner(\/.*)?$/;
@@ -130,29 +113,35 @@ export async function middleware(request: NextRequest) {
   // ============================================================
   const intlResponse = intlMiddleware(request);
 
-  // Extraire le chemin de base sans préfixe de langue (ex: /reservation depuis /fr/reservation)
+  // Extraire le chemin de base sans préfixe de langue (ex: /login depuis /fr/login)
   const basePath = pathname.replace(/^\/(fr|en)/, '') || '/';
 
   // Extraction de la locale (défaut 'fr')
   const localeMatch = pathname.match(/^\/(fr|en)/);
   const locale = localeMatch ? localeMatch[1] : 'fr';
 
-  const isPublic = PUBLIC_ROUTES.some(
+  const isAuthPage = AUTH_PAGES.some(
     (route) => basePath === route || basePath.startsWith(route + '/')
   );
-  const isTravelerProtected = TRAVELER_PROTECTED_ROUTES.some(
-    (route) => basePath === route || basePath.startsWith(route + '/')
-  );
-  const isLoginPage = basePath === '/login' || basePath === '/register';
+
+  // La page de login / register est toujours accessible librement
+  if (isAuthPage) {
+    return intlResponse;
+  }
 
   // Fast path: Détection rapide de cookie de session Supabase
   const hasAuthCookie = request.cookies.getAll().some(
     (c) => c.name.includes('sb-') || c.name.includes('supabase')
   );
 
-  // Si route publique et pas de cookie d'authentification, retourner directement
-  if (isPublic && !hasAuthCookie) {
-    return intlResponse;
+  // Non authentifié -> Redirection obligatoire vers la page de login avant d'accéder à l'accueil
+  if (!hasAuthCookie) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = `/${locale}/login`;
+    if (basePath !== '/') {
+      loginUrl.searchParams.set('redirect', basePath);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   // Configuration Supabase pour validation serveur voyageur
@@ -183,12 +172,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Si route voyageur protégée et session invalide côté Supabase
-  if (isTravelerProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/login`;
-    url.searchParams.set('redirect', basePath);
-    return NextResponse.redirect(url);
+  // Si session invalide ou expirée côté Supabase -> Redirection vers login
+  if (!user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = `/${locale}/login`;
+    if (basePath !== '/') {
+      loginUrl.searchParams.set('redirect', basePath);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   return intlResponse;

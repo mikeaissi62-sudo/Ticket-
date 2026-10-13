@@ -12,6 +12,11 @@ export const Header = () => {
   const pathname = usePathname();
   const { user } = useAuth();
 
+  // Ne pas afficher le Header sur la page login ou register
+  if (pathname.includes('/login') || pathname.includes('/register')) {
+    return null;
+  }
+
   const isActive = (path: string) => {
     if (path === `/${locale}`) {
       return pathname === `/${locale}` || pathname === `/${locale}/`;
