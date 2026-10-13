@@ -36,6 +36,11 @@ export async function middleware(request: NextRequest) {
   // 2. Traitement dédié des portails /admin et /partner (HORS next-intl)
   // ============================================================
   if (isPartner || isAdmin) {
+    // La page de connexion dédiée aux partenaires est accessible publiquement
+    if (pathname === '/partner/login') {
+      return NextResponse.next();
+    }
+
     let response = NextResponse.next({
       request: {
         headers: request.headers,
@@ -74,11 +79,16 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Non connecté -> Redirection vers /fr/login
+    // Non connecté -> Redirection vers la page de login appropriée
     if (!user) {
       const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = '/fr/login';
-      loginUrl.searchParams.set('redirect', pathname);
+      if (isPartner) {
+        // Rediriger vers la page login dédiée aux compagnies
+        loginUrl.pathname = '/partner/login';
+      } else {
+        loginUrl.pathname = '/fr/login';
+        loginUrl.searchParams.set('redirect', pathname);
+      }
       return NextResponse.redirect(loginUrl);
     }
 

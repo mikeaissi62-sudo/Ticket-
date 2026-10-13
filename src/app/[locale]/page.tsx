@@ -716,7 +716,7 @@ export default function LandingPage() {
 
             <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3 w-full sm:w-auto">
               <Link
-                href={`/${locale}/login?redirect=/partner`}
+                href="/partner/login"
                 className="px-8 py-4 rounded-2xl bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-[14px] transition-all text-center shadow-lg shadow-emerald-500/25 active:scale-98"
               >
                 Accéder au Portail Compagnie
