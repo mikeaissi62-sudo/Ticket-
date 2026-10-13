@@ -45,17 +45,18 @@ export async function GET(request: NextRequest) {
       const admin = createAdminClient();
       const { data: existingProfile } = await admin
         .from('users')
-        .select('id')
+        .select('id, role')
         .eq('id', data.user.id)
         .single();
 
       if (!existingProfile) {
-        // Premier login OAuth — créer le profil voyageur
+        // Premier login OAuth
         const metadata = data.user.user_metadata || {};
         const fullName = metadata.full_name || metadata.name || '';
         const nameParts = fullName.split(' ');
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
+        const role = next.startsWith('/partner') ? 'partner' : 'traveler';
 
         await (admin.from('users') as any).upsert({
           id: data.user.id,
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
           phone: metadata.phone || '',
           first_name: firstName,
           last_name: lastName,
-          role: 'traveler',
+          role: role,
           preferences: {
             city: 'Cotonou',
             idType: 'cni',

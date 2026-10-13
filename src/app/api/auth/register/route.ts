@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const role = body.role === 'partner' ? 'partner' : 'traveler';
+    const companyId = body.companyId || null;
+
     // Créer le compte pré-confirmé
     const { data: newUser, error: createError } = await admin.auth.admin.createUser({
       email,
@@ -35,6 +38,8 @@ export async function POST(request: NextRequest) {
         first_name: firstName,
         last_name: lastName,
         phone: phone || '',
+        role,
+        company_id: companyId,
       },
     });
 
@@ -49,7 +54,8 @@ export async function POST(request: NextRequest) {
       phone: phone || '',
       first_name: firstName,
       last_name: lastName,
-      role: 'traveler',
+      role,
+      company_id: companyId,
       preferences: {
         city: 'Cotonou',
         idType: 'cni',
