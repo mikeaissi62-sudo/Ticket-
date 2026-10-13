@@ -11,8 +11,8 @@ const intlMiddleware = createIntlMiddleware({
 // 5.2 Middleware de Protection — Matrice des routes
 // ============================================================
 
-// Pages accessibles publiquement : Landing page d'accueil, login, register, recherche, suivi et pages d'information
-const PUBLIC_PAGES = ['/', '/login', '/register', '/compagnies', '/tarifs-et-lignes', '/contact', '/resultats', '/suivi', '/notifications'];
+// Pages accessibles publiquement : Landing page d'accueil, login, register, recherche et pages d'information
+const PUBLIC_PAGES = ['/', '/login', '/register', '/compagnies', '/tarifs-et-lignes', '/contact', '/resultats', '/notifications'];
 
 // Regex des routes de gestion
 const PARTNER_ROUTES = /^\/partner(\/.*)?$/;

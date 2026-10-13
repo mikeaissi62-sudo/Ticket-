@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useLocale } from 'next-intl';
 
 interface ActionButtonsProps {
@@ -159,15 +158,6 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ phone, data }) => 
           </span>
           <span>Renvoyer par SMS (+229 {passengerPhone})</span>
         </button>
-
-        {/* Suivi du Bus en temps réel (Google Maps) */}
-        <Link
-          href={`/${locale}/suivi/${bookingRef}`}
-          className="w-full py-3 px-space-md rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white font-body-md text-body-md font-bold transition-all flex items-center justify-center gap-space-xs shadow-sm mt-1"
-        >
-          <span className="material-symbols-outlined text-[20px] text-[#10B981]">location_on</span>
-          <span>Suivre mon bus en temps réel</span>
-        </Link>
       </div>
       
       {feedback && (

@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
 💰 *Montant réglé* : ${Number(price).toLocaleString('fr-FR')} FCFA
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-📲 *QR Code & Suivi GPS en direct du bus* :
-https://ticketplus.bj/fr/suivi/${bookingRef}
+📲 *QR Code & E-billet officiel* :
+https://ticketplus.bj/fr/mon-billet
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ℹ️ *Bagages* : 1 valise en soute incluse (25 kg).
 📞 *Assistance Voyageur Ticket+* : +229 01 54 65 89 07

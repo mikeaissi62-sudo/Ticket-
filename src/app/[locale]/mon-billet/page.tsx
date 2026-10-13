@@ -330,19 +330,12 @@ export default function MonBilletPage() {
                         {ticket.isFlexible && (
                           <button 
                             onClick={() => setRefundModalTicket(ticket)}
-                            className="px-3.5 py-2 rounded-xl bg-amber-50 text-amber-800 text-[12px] font-semibold hover:bg-amber-100 transition-all flex items-center gap-1.5 border border-amber-200 shadow-sm"
+                            className="px-3.5 py-2 rounded-xl bg-amber-50 text-amber-800 text-[12px] font-semibold hover:bg-amber-100 transition-all flex items-center gap-1.5 border border-amber-200 shadow-sm ml-auto"
                           >
                             <span className="material-symbols-outlined text-[16px]">currency_exchange</span>
                             Annuler &amp; Rembourser
                           </button>
                         )}
-                        <Link
-                          href={`/${locale}/suivi/${ticket.ref}`}
-                          className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-[12px] font-bold hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm ml-auto"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">location_on</span>
-                          Suivre le Bus en direct
-                        </Link>
                       </div>
                     )}
                   </div>
@@ -433,17 +426,10 @@ export default function MonBilletPage() {
             <div className="flex gap-2">
               <button 
                 onClick={() => setSelectedQrTicket(null)}
-                className="flex-1 py-3 rounded-xl bg-[#0F172A] text-white text-[13px] font-bold hover:bg-[#1E293B] transition-all"
+                className="w-full py-3 rounded-xl bg-[#0F172A] text-white text-[13px] font-bold hover:bg-[#1E293B] transition-all"
               >
                 Fermer
               </button>
-              <Link
-                href={`/${locale}/suivi/${selectedQrTicket.ref}`}
-                className="flex-1 py-3 rounded-xl bg-emerald-600 text-white text-[13px] font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-1"
-              >
-                <span className="material-symbols-outlined text-[16px]">location_on</span>
-                Suivre le Bus
-              </Link>
             </div>
           </div>
         </div>

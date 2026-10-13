@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const dateStr = date ? new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : 'prochain';
 
     // SMS standard télécom béninois (optimisé < 160 car.)
-    const smsMessage = `Ticket+ : Réservation ${bookingRef} confirmée. ${from}->${to} le ${dateStr} à ${departure} (${company}). Siège ${seat}. Billet: ticketplus.bj/fr/suivi/${bookingRef}`;
+    const smsMessage = `Ticket+ : Réservation ${bookingRef} confirmée. ${from}->${to} le ${dateStr} à ${departure} (${company}). Siège ${seat}. Billet: ticketplus.bj/fr/mon-billet`;
 
     // Simulation ou envoi réel selon PHONE_OTP_MODE
     const isLiveMode = process.env.PHONE_OTP_MODE === 'prod';

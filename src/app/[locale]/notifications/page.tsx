@@ -332,11 +332,11 @@ export default function NotificationsCenterPage() {
                     <div className="flex items-center gap-3 mt-3">
                       {item.type === 'departure' && (
                         <Link
-                          href={`/${locale}/suivi/TK-LIVE`}
+                          href={`/${locale}/mon-billet`}
                           className="inline-flex items-center gap-1 text-[12px] font-bold text-[#10B981] hover:underline"
                         >
-                          <span className="material-symbols-outlined text-[15px]">location_on</span>
-                          <span>Suivre le bus en direct</span>
+                          <span className="material-symbols-outlined text-[15px]">confirmation_number</span>
+                          <span>Voir mon billet</span>
                         </Link>
                       )}
                       {item.type === 'booking' && (
