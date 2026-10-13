@@ -93,8 +93,7 @@ export default function LoginPage() {
             router.replace(`/${locale}${target}`);
             return;
           }
-          // Do not force-redirect to home so the user can switch accounts, 
-          // use the test buttons, or sign out.
+          // Utilisateur déjà connecté sans redirect spécifique → page d'accueil voyageur
         }
       } catch {
         // Continue to login page
@@ -128,7 +127,7 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [otpCountdown]);
 
-  // Redirection vers l'Accueil ou la page demandée après connexion ou inscription
+  // Redirection vers l'Accueil initialement conçu ou la page demandée après connexion ou inscription
   const handleAuthSuccess = () => {
     try {
       localStorage.setItem('tp_remember_me', rememberMe ? '1' : '0');
@@ -148,7 +147,8 @@ export default function LoginPage() {
         return;
       }
     } catch {}
-    router.replace(`/${locale}`);
+    // Lorsqu'un voyageur se connecte, il est redirigé vers la page d'accueil initialement conçue
+    router.replace(`/${locale}/accueil`);
     router.refresh();
   };
 
@@ -465,14 +465,23 @@ export default function LoginPage() {
             {/* Top banner */}
             <div className="bg-[#0F172A] p-6 text-white text-center relative">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+                <Link
+                  href={`/${locale}`}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
                   <div className="w-7 h-7 rounded-lg bg-[#10B981] flex items-center justify-center text-white font-black text-[14px]">
                     T+
                   </div>
                   <span className="font-bold text-[14px] tracking-tight">Ticket+</span>
-                </div>
+                </Link>
 
-
+                <Link
+                  href={`/${locale}`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/90 hover:text-white text-[12px] font-semibold transition-all"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  <span>Retour à l&apos;accueil</span>
+                </Link>
               </div>
 
               <h2 className="text-[20px] sm:text-[22px] font-extrabold tracking-tight">

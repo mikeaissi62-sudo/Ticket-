@@ -154,14 +154,6 @@ export default function LandingPage() {
             
             {/* Left Column: Headlines & CTA */}
             <div className="lg:col-span-7 space-y-6 text-left">
-              
-              {/* Badge Pills */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
-                <span className="text-[12px] font-bold text-emerald-800 tracking-wide uppercase">
-                  N°1 de la billetterie interurbaine au Bénin
-                </span>
-              </div>
 
               {/* Main Headline */}
               <h1 className="text-[36px] sm:text-[46px] lg:text-[52px] font-black text-[#0F172A] tracking-tight leading-[1.12]">
@@ -705,7 +697,7 @@ export default function LandingPage() {
 
             <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3 w-full sm:w-auto">
               <Link
-                href={`/${locale}/login?role=partner`}
+                href={`/${locale}/login?redirect=/partner`}
                 className="px-8 py-4 rounded-2xl bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-[14px] transition-all text-center shadow-lg shadow-emerald-500/25 active:scale-98"
               >
                 Accéder au Portail Compagnie

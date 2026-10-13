@@ -17,9 +17,12 @@ export const Header = () => {
     return null;
   }
 
+  // Lien d'accueil : landing page pour visiteurs, /accueil pour utilisateurs connectés
+  const homeHref = user ? `/${locale}/accueil` : `/${locale}`;
+
   const isActive = (path: string) => {
     if (path === `/${locale}`) {
-      return pathname === `/${locale}` || pathname === `/${locale}/`;
+      return pathname === `/${locale}` || pathname === `/${locale}/` || pathname === `/${locale}/accueil`;
     }
     return pathname.startsWith(path);
   };
@@ -32,7 +35,7 @@ export const Header = () => {
           {/* Left: Logo */}
           <div className="flex items-center shrink-0">
             <Link 
-              href={`/${locale}`} 
+              href={homeHref} 
               prefetch={true}
               className="flex items-center gap-2.5 group shrink-0 active:scale-95 transition-transform duration-75"
             >
@@ -53,7 +56,7 @@ export const Header = () => {
           {/* Center: Desktop Navigation (Flex, never overlapping) */}
           <nav className="hidden lg:flex items-center gap-1 xl:gap-2 shrink-0">
             <Link 
-              href={`/${locale}`} 
+              href={homeHref} 
               prefetch={true}
               className={`px-3 py-2 transition-all rounded-xl text-[13px] xl:text-[14px] font-semibold active:scale-95 duration-75 ${
                 isActive(`/${locale}`) 
@@ -212,7 +215,7 @@ export const Header = () => {
           <div className="bg-surface-container-lowest border-b border-outline-variant/40 p-5 shadow-xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <nav className="flex flex-col gap-1.5">
               <Link 
-                href={`/${locale}`} 
+                href={homeHref} 
                 prefetch={true}
                 onClick={() => setMobileMenuOpen(false)} 
                 className={`px-4 py-3 rounded-xl text-[14px] font-semibold active:scale-98 transition-all duration-75 flex items-center gap-3 ${
