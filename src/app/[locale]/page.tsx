@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
+import { useAuth } from '@/lib/auth/client-guards';
+import AccueilVoyageurPage from './accueil/page';
 
 // FAQ Items
 interface FaqItem {
@@ -136,11 +138,17 @@ const PARTNERS = [
 
 export default function LandingPage() {
   const locale = useLocale();
+  const { user, isLoading } = useAuth();
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
+
+  // Si l'utilisateur est connecté (voyageur ou autre), afficher directement l'accueil de recherche
+  if (!isLoading && user) {
+    return <AccueilVoyageurPage />;
+  }
 
   return (
     <div className="flex flex-col w-full bg-slate-50 text-[#0F172A] selection:bg-[#10B981] selection:text-white">
