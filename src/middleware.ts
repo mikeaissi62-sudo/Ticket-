@@ -11,8 +11,8 @@ const intlMiddleware = createIntlMiddleware({
 // 5.2 Middleware de Protection — Matrice des routes
 // ============================================================
 
-// Seules les pages de connexion et inscription sont accessibles sans authentification préalable
-const AUTH_PAGES = ['/login', '/register'];
+// Pages accessibles publiquement : Landing page d'accueil, login, register et pages d'information
+const PUBLIC_PAGES = ['/', '/login', '/register', '/compagnies', '/tarifs-et-lignes', '/contact'];
 
 // Regex des routes de gestion
 const PARTNER_ROUTES = /^\/partner(\/.*)?$/;
@@ -120,12 +120,12 @@ export async function middleware(request: NextRequest) {
   const localeMatch = pathname.match(/^\/(fr|en)/);
   const locale = localeMatch ? localeMatch[1] : 'fr';
 
-  const isAuthPage = AUTH_PAGES.some(
+  const isPublicPage = PUBLIC_PAGES.some(
     (route) => basePath === route || basePath.startsWith(route + '/')
   );
 
-  // La page de login / register est toujours accessible librement
-  if (isAuthPage) {
+  // La Landing page, la page de login / register et les pages publiques sont accessibles librement
+  if (isPublicPage) {
     return intlResponse;
   }
 

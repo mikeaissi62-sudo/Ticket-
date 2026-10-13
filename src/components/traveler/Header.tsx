@@ -145,32 +145,50 @@ export const Header = () => {
               <span className="material-symbols-outlined text-[20px]">notifications</span>
             </Link>
 
-            {/* Profil Button */}
-            <Link
-              href={`/${locale}/profil`}
-              prefetch={true}
-              aria-label="Mon Profil"
-              title={user ? 'Mon Profil' : 'Profil / Connexion'}
-              className={`hidden sm:flex h-10 px-3.5 items-center justify-center gap-1.5 rounded-xl transition-all active:scale-95 duration-75 shrink-0 ${
-                isActive(`/${locale}/profil`) || isActive(`/${locale}/login`)
-                  ? 'bg-primary text-on-primary font-bold shadow-sm'
-                  : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40 font-bold text-[12px]'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">person</span>
-              <span>{user ? 'Profil' : 'Profil'}</span>
-            </Link>
+            {/* User Buttons: Logged In vs Visitor (Upwork Style) */}
+            {user ? (
+              <>
+                <Link
+                  href={`/${locale}/profil`}
+                  prefetch={true}
+                  aria-label="Mon Profil"
+                  title="Mon Profil"
+                  className={`hidden sm:flex h-10 px-3.5 items-center justify-center gap-1.5 rounded-xl transition-all active:scale-95 duration-75 shrink-0 ${
+                    isActive(`/${locale}/profil`)
+                      ? 'bg-primary text-on-primary font-bold shadow-sm'
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40 font-bold text-[12px]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                  <span>Profil</span>
+                </Link>
 
-            {/* Bouton Déconnexion rapide si connecté */}
-            {user && (
-              <button
-                onClick={() => signOut()}
-                title="Se déconnecter"
-                aria-label="Se déconnecter"
-                className="hidden sm:flex w-10 h-10 items-center justify-center rounded-xl bg-surface-container hover:bg-rose-50 hover:text-rose-600 text-on-surface-variant border border-outline-variant/40 transition-all active:scale-90 duration-75 shrink-0"
-              >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
-              </button>
+                <button
+                  onClick={() => signOut()}
+                  title="Se déconnecter"
+                  aria-label="Se déconnecter"
+                  className="hidden sm:flex w-10 h-10 items-center justify-center rounded-xl bg-surface-container hover:bg-rose-50 hover:text-rose-600 text-on-surface-variant border border-outline-variant/40 transition-all active:scale-90 duration-75 shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                </button>
+              </>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2">
+                <Link
+                  href={`/${locale}/login`}
+                  prefetch={true}
+                  className="h-10 px-3.5 flex items-center justify-center rounded-xl text-[13px] font-bold text-[#0F172A] hover:bg-surface-container transition-all active:scale-95"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  href={`/${locale}/login`}
+                  prefetch={true}
+                  className="h-10 px-4 flex items-center justify-center rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-[13px] font-bold transition-all shadow-sm active:scale-95"
+                >
+                  S&apos;inscrire
+                </Link>
+              </div>
             )}
 
             {/* Mobile menu hamburger button */}
