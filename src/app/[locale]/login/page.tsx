@@ -968,59 +968,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Separator */}
-              <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-[#E2E8F0]"></div>
-                <span className="text-[11px] text-[#94A3B8] font-medium">OU</span>
-                <div className="flex-1 h-px bg-[#E2E8F0]"></div>
-              </div>
-
-              {/* One-click Demo Buttons */}
-              <div className="space-y-2 pt-1">
-                <div className="text-center">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">
-                    Accès Rapide aux Portails (Mode Test)
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleDemoLogin('traveler')}
-                    disabled={isLoading}
-                    className="py-2.5 px-2 rounded-xl bg-[#F8FAFC] hover:bg-emerald-50 border border-[#CBD5E1] hover:border-emerald-300 text-[#334155] hover:text-emerald-700 text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 shadow-xs"
-                    title="Se connecter en tant que Voyageur"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-emerald-600">person</span>
-                    <span>Voyageur</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDemoLogin('partner')}
-                    disabled={isLoading}
-                    className="py-2.5 px-2 rounded-xl bg-[#F8FAFC] hover:bg-teal-50 border border-[#CBD5E1] hover:border-teal-300 text-[#334155] hover:text-teal-700 text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 shadow-xs"
-                    title="Se connecter au Portail Compagnie"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-teal-600">corporate_fare</span>
-                    <span>Compagnie</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDemoLogin('admin')}
-                    disabled={isLoading}
-                    className="py-2.5 px-2 rounded-xl bg-[#F8FAFC] hover:bg-slate-900 border border-[#CBD5E1] hover:border-slate-800 text-[#334155] hover:text-white text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-1 shadow-xs group"
-                    title="Se connecter au Dashboard Administrateur"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-slate-800 group-hover:text-white">admin_panel_settings</span>
-                    <span>Admin</span>
-                  </button>
-                </div>
-              </div>
-
-
-
             </div>
           </div>
         </div>
