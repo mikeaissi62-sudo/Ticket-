@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createBookingSchema } from '@/lib/validations/booking';
+import { sanitizePlainText, sanitizeBeninPhone } from '@/lib/security/sanitize';
+import { checkRateLimit, getClientIp, RateLimitPresets } from '@/lib/security/rateLimit';
 
 // POST /api/bookings — Créer une réservation
 export async function POST(request: NextRequest) {
   try {
+    // 0. Protection contre le brute-force / spam
+    const clientIp = getClientIp(request.headers);
+    const rateLimit = checkRateLimit(`booking:${clientIp}`, RateLimitPresets.PUBLIC_API);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: `Trop de requêtes. Veuillez patienter ${rateLimit.reset} secondes.` },
+        { status: 429 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Vérifier l'authentification
@@ -18,7 +31,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const validation = createBookingSchema.safeParse(rawBody);
+
+    if (!validation.success) {
+      const firstError = validation.error.issues?.[0]?.message || 'Données de réservation invalides.';
+      return NextResponse.json(
+        { error: firstError, details: validation.error.format() },
+        { status: 400 }
+      );
+    }
+
     const {
       trip_id,
       seat_id,
@@ -28,15 +51,11 @@ export async function POST(request: NextRequest) {
       has_baggage = false,
       is_flexible = false,
       total_price,
-    } = body;
+    } = validation.data;
 
-    // Validation
-    if (!trip_id || !seat_id || !passenger_first_name || !passenger_last_name || !passenger_phone || !total_price) {
-      return NextResponse.json(
-        { error: 'Tous les champs obligatoires doivent être remplis.' },
-        { status: 400 }
-      );
-    }
+    const sanitizedFirstName = sanitizePlainText(passenger_first_name);
+    const sanitizedLastName = sanitizePlainText(passenger_last_name);
+    const sanitizedPhone = sanitizeBeninPhone(passenger_phone);
 
     // Vérifier que le siège est disponible
     const { data: seat, error: seatError } = await supabase
@@ -66,9 +85,9 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         trip_id,
         seat_id,
-        passenger_first_name,
-        passenger_last_name,
-        passenger_phone,
+        passenger_first_name: sanitizedFirstName,
+        passenger_last_name: sanitizedLastName,
+        passenger_phone: sanitizedPhone,
         has_baggage,
         is_flexible,
         total_price,

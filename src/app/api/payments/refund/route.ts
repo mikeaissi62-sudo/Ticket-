@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PaymentService } from '@/lib/payment/service';
-import { RefundRequest } from '@/lib/payment/types';
+import { refundPaymentSchema } from '@/lib/validations/payment';
+import { checkRateLimit, getClientIp, RateLimitPresets } from '@/lib/security/rateLimit';
+import { sanitizePlainText } from '@/lib/security/sanitize';
 
-// POST /api/payments/refund — Remboursement de billets flexibles
+// POST /api/payments/refund — Remboursement sécurisé de billets flexibles
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as RefundRequest;
-    const identifier = body.booking_reference || body.booking_id;
+    // 1. Rate limiting
+    const clientIp = getClientIp(request.headers);
+    const rateLimit = checkRateLimit(`refund:${clientIp}`, RateLimitPresets.PAYMENT_INITIATE);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: `Trop de requêtes. Veuillez patienter ${rateLimit.reset} secondes.` },
+        { status: 429 }
+      );
+    }
+
+    const raw = await request.json();
+
+    // 2. Validation Zod
+    const validation = refundPaymentSchema.safeParse(raw);
+    if (!validation.success) {
+      const firstError = validation.error.issues?.[0]?.message || 'Données de remboursement invalides.';
+      return NextResponse.json(
+        { error: firstError, details: validation.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { booking_reference, booking_id, reason } = validation.data;
+    const identifier = sanitizePlainText(booking_reference || booking_id || '');
+    const cleanReason = sanitizePlainText(reason || 'Annulation volontaire du passager');
 
     if (!identifier) {
       return NextResponse.json(
@@ -15,11 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await PaymentService.refundFlexibleBooking(
-      identifier,
-      body.reason || 'Annulation volontaire du passager'
-    );
-
+    const result = await PaymentService.refundFlexibleBooking(identifier, cleanReason);
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error('API payments refund error:', error);

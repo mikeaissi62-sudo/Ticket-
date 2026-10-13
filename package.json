@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "playwright test --project=api-and-unit",
+    "test:e2e": "playwright test --project=e2e",
+    "test:all": "playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -18,9 +21,11 @@
     "react": "^18",
     "react-dom": "^18",
     "resend": "^6.32.1",
+    "zod": "^4.6.7",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

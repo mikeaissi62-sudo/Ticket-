@@ -1,30 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PaymentService } from '@/lib/payment/service';
 import { PaymentInitiateRequest } from '@/lib/payment/types';
+import { initiatePaymentSchema } from '@/lib/validations/payment';
+import { checkRateLimit, getClientIp, RateLimitPresets } from '@/lib/security/rateLimit';
+import { sanitizeBeninPhone, sanitizePlainText } from '@/lib/security/sanitize';
 
-// POST /api/payments/initiate — Initialisation d'un paiement Mobile Money
+// POST /api/payments/initiate — Initialisation d'un paiement Mobile Money sécurisé
 export async function POST(request: NextRequest) {
   try {
-    const raw = await request.json();
-    const phone = raw.phone || raw.phone_number;
-    const booking_id = raw.booking_id || raw.booking_reference;
-    const provider = raw.provider;
-
-    if (!booking_id || !provider || !phone) {
+    // 1. Rate limiting strict sur l'initiation de paiement (5 req / min)
+    const clientIp = getClientIp(request.headers);
+    const rateLimit = checkRateLimit(`pay:${clientIp}`, RateLimitPresets.PAYMENT_INITIATE);
+    if (!rateLimit.success) {
       return NextResponse.json(
-        { error: 'Les paramètres réservation, moyen de paiement et téléphone sont obligatoires.' },
+        { error: `Trop de tentatives de paiement. Veuillez patienter ${rateLimit.reset} secondes avant de réessayer.` },
+        { status: 429 }
+      );
+    }
+
+    const raw = await request.json();
+    const normalizedInput = {
+      booking_id: raw.booking_id || raw.booking_reference,
+      booking_reference: raw.booking_reference || raw.booking_id,
+      provider: raw.provider,
+      phone: sanitizeBeninPhone(raw.phone || raw.phone_number),
+      amount: raw.amount ? Number(raw.amount) : undefined,
+      otp: raw.otp ? String(raw.otp).trim() : undefined,
+    };
+
+    // 2. Validation stricte avec schéma Zod
+    const validation = initiatePaymentSchema.safeParse(normalizedInput);
+    if (!validation.success) {
+      const firstError = validation.error.issues?.[0]?.message || 'Données de paiement non conformes.';
+      return NextResponse.json(
+        { error: firstError, details: validation.error.format() },
         { status: 400 }
       );
     }
 
+    const validData = validation.data;
+
     const payload: PaymentInitiateRequest = {
-      booking_id,
-      provider,
-      phone,
-      amount: raw.amount,
-      otp: raw.otp,
+      booking_id: sanitizePlainText(validData.booking_id),
+      provider: validData.provider,
+      phone: validData.phone,
+      amount: validData.amount,
+      otp: validData.otp,
     };
 
+    // 3. Appel du service de paiement
     const result = await PaymentService.initiatePayment(payload);
     return NextResponse.json(
       {

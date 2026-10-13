@@ -94,7 +94,7 @@ export const SearchForm = () => {
   };
 
   return (
-    <div ref={formRef} className="w-full max-w-[900px] bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-5 sm:p-6 md:p-7 text-left relative z-20">
+    <div ref={formRef} data-testid="search-form" className="w-full max-w-[900px] bg-white rounded-2xl shadow-md border border-[#E2E8F0] p-5 sm:p-6 md:p-7 text-left relative z-20">
       {/* Trip type selector + badge */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
         <div className="flex items-center gap-1.5 bg-[#F1F5F9] p-1 rounded-full">

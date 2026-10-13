@@ -12,8 +12,20 @@ import { saveOtp } from '@/lib/auth/otp-store';
  * En production avec Twilio/MessageBird configuré dans Supabase,
  * on utilise signInWithOtp natif.
  */
+import { checkRateLimit, getClientIp, RateLimitPresets } from '@/lib/security/rateLimit';
+
 export async function POST(request: NextRequest) {
   try {
+    // Protection anti SMS pumping et brute-force
+    const clientIp = getClientIp(request.headers);
+    const rateLimit = checkRateLimit(`otp:${clientIp}`, RateLimitPresets.PHONE_OTP);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: `Trop de demandes de code SMS. Veuillez patienter ${rateLimit.reset} secondes avant de réessayer.` },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     let { phone } = body;
 
