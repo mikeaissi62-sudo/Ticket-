@@ -10,7 +10,7 @@ export const Header = () => {
   const locale = useLocale();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   // Ne pas afficher le Header sur la page login ou register
   if (pathname.includes('/login') || pathname.includes('/register')) {
@@ -161,6 +161,18 @@ export const Header = () => {
               <span>{user ? 'Profil' : 'Profil'}</span>
             </Link>
 
+            {/* Bouton Déconnexion rapide si connecté */}
+            {user && (
+              <button
+                onClick={() => signOut()}
+                title="Se déconnecter"
+                aria-label="Se déconnecter"
+                className="hidden sm:flex w-10 h-10 items-center justify-center rounded-xl bg-surface-container hover:bg-rose-50 hover:text-rose-600 text-on-surface-variant border border-outline-variant/40 transition-all active:scale-90 duration-75 shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">logout</span>
+              </button>
+            )}
+
             {/* Mobile menu hamburger button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -278,6 +290,18 @@ export const Header = () => {
                 <span className="material-symbols-outlined text-[20px]">person</span>
                 {user ? 'Mon Profil' : 'Mon Profil'}
               </Link>
+              {user && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    signOut();
+                  }}
+                  className="px-4 py-3 rounded-xl text-[14px] font-semibold flex items-center gap-3 text-rose-600 hover:bg-rose-50 active:scale-98 transition-all duration-75 text-left"
+                >
+                  <span className="material-symbols-outlined text-[20px]">logout</span>
+                  Se déconnecter
+                </button>
+              )}
               <hr className="my-2 border-outline-variant/40" />
               <a 
                 href="https://wa.me/2290154658907" 

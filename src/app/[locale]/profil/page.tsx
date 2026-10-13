@@ -378,9 +378,14 @@ export default function ProfilPage() {
   // Handle Logout
   const handleLogout = async () => {
     setIsLoading(true);
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {}
     setUser(null);
     setIsLoading(false);
+    if (typeof window !== 'undefined') {
+      window.location.href = `/${locale}/login`;
+    }
   };
 
   // Save profile updates

@@ -116,10 +116,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, fetchProfile]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {}
     setUser(null);
     setProfile(null);
     setRole('traveler');
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   };
 
   const value: AuthContextType = {
