@@ -384,7 +384,7 @@ export default function ProfilPage() {
     setUser(null);
     setIsLoading(false);
     if (typeof window !== 'undefined') {
-      window.location.href = `/${locale}/login`;
+      window.location.href = `/${locale}`;
     }
   };
 

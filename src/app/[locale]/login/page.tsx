@@ -127,11 +127,12 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [otpCountdown]);
 
-  // Redirection vers l'Accueil initialement conçu ou la page demandée après connexion ou inscription
-  const handleAuthSuccess = () => {
+  // Redirection selon le rôle après connexion ou inscription
+  const handleAuthSuccess = async () => {
     try {
       localStorage.setItem('tp_remember_me', rememberMe ? '1' : '0');
     } catch {}
+
     try {
       const searchParams = new URLSearchParams(window.location.search);
       const redirectParam = searchParams.get('redirect');
@@ -146,7 +147,26 @@ export default function LoginPage() {
         router.refresh();
         return;
       }
+
+      // Si aucun redirect explicite n'a été fourni, inspecter le profil utilisateur
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser?.id) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', authUser.id)
+          .single();
+
+        if (profile?.role === 'partner') {
+          window.location.href = '/partner';
+          return;
+        } else if (profile?.role === 'admin') {
+          window.location.href = '/admin';
+          return;
+        }
+      }
     } catch {}
+
     // Lorsqu'un voyageur se connecte, il est redirigé vers la page d'accueil initialement conçue
     router.replace(`/${locale}/accueil`);
     router.refresh();

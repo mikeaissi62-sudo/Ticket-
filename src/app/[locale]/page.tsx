@@ -138,15 +138,26 @@ const PARTNERS = [
 
 export default function LandingPage() {
   const locale = useLocale();
-  const { user, isLoading } = useAuth();
+  const { user, role, isLoading } = useAuth();
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
-  // Si l'utilisateur est connecté (voyageur ou autre), afficher directement l'accueil de recherche
+  // Si l'utilisateur est connecté :
+  // - Les partenaires vont au portail compagnie
+  // - Les administrateurs vont au dashboard admin
+  // - Les voyageurs voient directement la recherche de billets
   if (!isLoading && user) {
+    if (role === 'partner') {
+      if (typeof window !== 'undefined') window.location.href = '/partner';
+      return null;
+    }
+    if (role === 'admin') {
+      if (typeof window !== 'undefined') window.location.href = '/admin';
+      return null;
+    }
     return <AccueilVoyageurPage />;
   }
 

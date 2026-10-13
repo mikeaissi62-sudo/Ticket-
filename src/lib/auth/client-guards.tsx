@@ -42,6 +42,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const locale = useSafeLocale();
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -123,7 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     setRole('traveler');
     if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+      // Redirection vers la page de présentation à la déconnexion
+      window.location.href = `/${locale}`;
     }
   };
 
