@@ -3,49 +3,32 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
+import { createClient } from '@/lib/supabase/client';
 
 interface NotificationItem {
   id: string;
   title: string;
   message: string;
-  type: 'booking' | 'departure' | 'promo' | 'system' | 'alert';
+  type: 'booking' | 'departure' | 'promo' | 'system';
   is_read: boolean;
   created_at: string;
 }
 
-const TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
-  booking: { icon: 'confirmation_number', color: 'text-[#10B981]', bg: 'bg-[#ECFDF5]' },
-  departure: { icon: 'schedule', color: 'text-[#F59E0B]', bg: 'bg-[#FEF3C7]' },
-  alert: { icon: 'error', color: 'text-[#F59E0B]', bg: 'bg-[#FEF3C7]' },
-  promo: { icon: 'campaign', color: 'text-[#3B82F6]', bg: 'bg-[#EFF6FF]' },
-  system: { icon: 'info', color: 'text-[#64748B]', bg: 'bg-[#F1F5F9]' },
-};
-
-function formatNotificationDate(dateStr: string) {
-  try {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const isToday = d.toDateString() === now.toDateString();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const isYesterday = d.toDateString() === yesterday.toDateString();
-
-    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    if (isToday) return `Aujourd'hui • ${time}`;
-    if (isYesterday) return `Hier • ${time}`;
-    return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} • ${time}`;
-  } catch {
-    return dateStr;
-  }
-}
-
-export default function NotificationsPage() {
+export default function NotificationsCenterPage() {
   const locale = useLocale();
+  const [supabase] = useState(() => createClient());
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'departure' | 'booking'>('all');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
-  const fetchNotifications = useCallback(async () => {
+  const showFeedback = (msg: string) => {
+    setActionFeedback(msg);
+    setTimeout(() => setActionFeedback(null), 4000);
+  };
+
+  const loadNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/notifications');
@@ -60,211 +43,328 @@ export default function NotificationsPage() {
         setNotifications(data.notifications);
       }
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-      setIsLoggedIn(false);
+      console.error('Failed to load notifications:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    loadNotifications();
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+    // Supabase Realtime Subscription pour recevoir les notifications en direct
+    const channel = supabase
+      .channel('user-notifications-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          loadNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadNotifications, supabase]);
+
+  const markAsRead = async (id: string) => {
+    try {
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
+      );
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_read: true }),
+      });
+    } catch (err) {
+      console.error('Error marking as read:', err);
+    }
+  };
 
   const markAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     try {
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ all: true, is_read: true }),
       });
+      showFeedback('Toutes les notifications ont été marquées comme lues.');
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      console.error('Error marking all as read:', err);
     }
   };
 
-  const toggleRead = async (id: string, currentStatus: boolean) => {
-    const nextStatus = !currentStatus;
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, is_read: nextStatus } : n))
-    );
+  const deleteNotification = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
-      await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, is_read: nextStatus }),
-      });
-    } catch (err) {
-      console.error('Failed to toggle read:', err);
-    }
-  };
-
-  const deleteNotification = async (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    try {
+      setNotifications(prev => prev.filter(n => n.id !== id));
       await fetch(`/api/notifications?id=${id}`, {
         method: 'DELETE',
       });
+      showFeedback('Notification supprimée.');
     } catch (err) {
-      console.error('Failed to delete notification:', err);
+      console.error('Error deleting notification:', err);
+    }
+  };
+
+  const triggerDepartureReminder = async () => {
+    try {
+      const res = await fetch('/api/notifications/reminders', { method: 'POST' });
+      if (res.ok) {
+        showFeedback('Vérification effectuée : Rappels de départ actualisés.');
+        loadNotifications();
+      }
+    } catch (err) {
+      console.error('Error triggering reminders:', err);
+    }
+  };
+
+  const filtered = notifications.filter(n => {
+    if (filter === 'unread') return !n.is_read;
+    if (filter === 'departure') return n.type === 'departure';
+    if (filter === 'booking') return n.type === 'booking';
+    return true;
+  });
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'departure':
+        return { icon: 'directions_bus', bg: 'bg-emerald-50 text-emerald-600 border-emerald-200' };
+      case 'booking':
+        return { icon: 'confirmation_number', bg: 'bg-blue-50 text-blue-600 border-blue-200' };
+      case 'promo':
+        return { icon: 'local_offer', bg: 'bg-amber-50 text-amber-600 border-amber-200' };
+      default:
+        return { icon: 'notifications', bg: 'bg-slate-100 text-slate-700 border-slate-200' };
     }
   };
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-[#F8FAFC]">
-      {/* Header */}
-      <section className="px-4 sm:px-6 pb-4 pt-4">
-        <div className="max-w-[800px] mx-auto">
-          <div className="flex items-center gap-2 mb-1">
-            <Link href={`/${locale}`} className="text-[13px] text-[#64748B] hover:text-[#0F172A] transition-colors">
-              Accueil
-            </Link>
-            <span className="text-[#CBD5E1]">/</span>
-            <span className="text-[13px] text-[#0F172A] font-semibold">Notifications</span>
+    <div className="flex flex-col w-full min-h-[calc(100vh-80px)] bg-slate-50">
+      <div className="max-w-[1000px] mx-auto px-4 sm:px-6 py-6 w-full">
+        {/* Breadcrumb & Title */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-1 text-[13px] text-[#64748B]">
+            <Link href={`/${locale}`} className="hover:text-[#0F172A] transition-colors">Accueil</Link>
+            <span>/</span>
+            <span className="text-[#0F172A] font-semibold">Centre de Notifications</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
             <div>
-              <h1 className="text-[28px] sm:text-[36px] font-extrabold text-[#0F172A] tracking-tight flex items-center gap-3">
-                Notifications
+              <h1 className="text-[28px] sm:text-[34px] font-extrabold text-[#0F172A] tracking-tight flex items-center gap-3">
+                <span>Notifications</span>
                 {unreadCount > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#EF4444] text-white text-[12px] font-bold">
-                    {unreadCount}
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#10B981] text-white text-[13px] font-bold">
+                    {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
                   </span>
                 )}
               </h1>
-              <p className="text-[14px] text-[#64748B] mt-1">
-                Restez informé en temps réel de vos réservations, rappels et actualités.
+              <p className="text-[14px] text-[#64748B] mt-0.5">
+                Rappels de départs, confirmations de réservation et alertes trafic en temps réel.
               </p>
             </div>
-            {unreadCount > 0 && (
+            
+            {/* Quick Actions */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={markAllAsRead}
-                className="px-4 py-2 rounded-xl bg-white border border-[#E2E8F0] text-[#0F172A] text-[13px] font-semibold hover:bg-[#F1F5F9] transition-all shadow-sm self-start sm:self-auto"
+                onClick={triggerDepartureReminder}
+                className="px-3.5 py-2 rounded-xl bg-white border border-[#E2E8F0] hover:bg-slate-50 text-[#0F172A] text-[12px] font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+                title="Vérifier mes prochains départs"
               >
-                Tout marquer comme lu
+                <span className="material-symbols-outlined text-[16px] text-[#10B981]">alarm</span>
+                <span>Vérifier rappels</span>
               </button>
-            )}
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="px-3.5 py-2 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+                >
+                  <span className="material-symbols-outlined text-[16px]">done_all</span>
+                  <span>Tout marquer lu</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* Notifications List */}
-      <section className="px-4 sm:px-6 pb-12 flex-1">
-        <div className="max-w-[800px] mx-auto">
+        {/* Feedback alert */}
+        {actionFeedback && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[13px] font-medium flex items-center gap-2 animate-fade-in shadow-sm">
+            <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
+            <span>{actionFeedback}</span>
+          </div>
+        )}
+
+        {/* Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-all ${
+              filter === 'all'
+                ? 'bg-[#0F172A] text-white shadow-sm'
+                : 'bg-white text-[#64748B] hover:text-[#0F172A] border border-[#E2E8F0]'
+            }`}
+          >
+            Toutes ({notifications.length})
+          </button>
+          <button
+            onClick={() => setFilter('unread')}
+            className={`px-4 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-all ${
+              filter === 'unread'
+                ? 'bg-[#0F172A] text-white shadow-sm'
+                : 'bg-white text-[#64748B] hover:text-[#0F172A] border border-[#E2E8F0]'
+            }`}
+          >
+            Non lues ({unreadCount})
+          </button>
+          <button
+            onClick={() => setFilter('departure')}
+            className={`px-4 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              filter === 'departure'
+                ? 'bg-[#0F172A] text-white shadow-sm'
+                : 'bg-white text-[#64748B] hover:text-[#0F172A] border border-[#E2E8F0]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px] text-emerald-500">directions_bus</span>
+            <span>Rappels Départs</span>
+          </button>
+          <button
+            onClick={() => setFilter('booking')}
+            className={`px-4 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              filter === 'booking'
+                ? 'bg-[#0F172A] text-white shadow-sm'
+                : 'bg-white text-[#64748B] hover:text-[#0F172A] border border-[#E2E8F0]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px] text-blue-500">confirmation_number</span>
+            <span>Billets & Réservations</span>
+          </button>
+        </div>
+
+        {/* Notifications List */}
+        <div className="space-y-3">
           {isLoading ? (
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-12 text-center flex flex-col items-center">
-              <span className="material-symbols-outlined text-[42px] text-[#10B981] animate-spin mb-3">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center shadow-sm">
+              <span className="material-symbols-outlined text-[36px] text-[#10B981] animate-spin mb-2 block">
                 progress_activity
               </span>
-              <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Chargement des notifications...</h3>
-              <p className="text-[13px] text-[#64748B]">Connexion sécurisée à Supabase.</p>
+              <p className="text-[14px] text-[#64748B]">Chargement de vos notifications...</p>
             </div>
           ) : isLoggedIn === false ? (
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-10 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-[#FEF3C7] flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[32px] text-[#F59E0B]">lock</span>
-              </div>
-              <h3 className="text-[18px] font-bold text-[#0F172A] mb-1">
-                Connectez-vous pour voir vos notifications
-              </h3>
-              <p className="text-[14px] text-[#64748B] max-w-[420px] mb-6">
-                Accédez à vos confirmations d&apos;achat, rappels 2h avant le départ de votre bus et changements d&apos;horaires.
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center shadow-sm">
+              <span className="material-symbols-outlined text-[48px] text-[#CBD5E1] mb-2 block">
+                lock
+              </span>
+              <h3 className="text-[17px] font-bold text-[#0F172A] mb-1">Connexion requise</h3>
+              <p className="text-[13px] text-[#64748B] mb-5 max-w-sm mx-auto">
+                Connectez-vous pour consulter vos notifications de voyage, alertes départs et confirmations.
               </p>
               <Link
-                href={`/${locale}/profil`}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#0F172A] text-white text-[14px] font-semibold hover:bg-[#1E293B] transition-all shadow-sm active:scale-95"
+                href={`/${locale}/login`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F172A] text-white text-[13px] font-bold hover:bg-[#1E293B] transition-all"
               >
-                <span className="material-symbols-outlined text-[18px]">person</span>
-                Se connecter / S&apos;inscrire
+                Se connecter
               </Link>
             </div>
-          ) : notifications.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-10 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-[#F1F5F9] flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[32px] text-[#94A3B8]">notifications_off</span>
-              </div>
-              <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Aucune notification</h3>
-              <p className="text-[13px] text-[#64748B]">Vous êtes à jour ! Vous n&apos;avez aucune nouvelle notification.</p>
+          ) : filtered.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center shadow-sm">
+              <span className="material-symbols-outlined text-[48px] text-[#CBD5E1] mb-2 block">
+                notifications_off
+              </span>
+              <h3 className="text-[17px] font-bold text-[#0F172A] mb-1">Aucune notification</h3>
+              <p className="text-[13px] text-[#64748B] max-w-sm mx-auto">
+                Vous n&apos;avez aucune notification dans cette catégorie pour le moment.
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {notifications.map(notif => {
-                const config = TYPE_CONFIG[notif.type] || TYPE_CONFIG.system;
-                return (
+            filtered.map(item => {
+              const { icon, bg } = getTypeIcon(item.type);
+              const dateObj = new Date(item.created_at);
+              const formattedTime = dateObj.toLocaleDateString('fr-FR', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => !item.is_read && markAsRead(item.id)}
+                  className={`bg-white rounded-2xl border transition-all p-4 sm:p-5 flex items-start gap-3 sm:gap-4 relative group cursor-pointer shadow-sm hover:shadow-md ${
+                    item.is_read
+                      ? 'border-[#E2E8F0] opacity-90'
+                      : 'border-[#10B981]/40 bg-emerald-50/20 ring-1 ring-[#10B981]/20'
+                  }`}
+                >
+                  {/* Icon */}
                   <div
-                    key={notif.id}
-                    className={`relative bg-white rounded-2xl border transition-all overflow-hidden group ${
-                      notif.is_read
-                        ? 'border-[#E2E8F0] shadow-sm opacity-80 hover:opacity-100'
-                        : 'border-[#10B981]/30 shadow-md ring-1 ring-[#10B981]/10'
-                    }`}
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${bg}`}
                   >
-                    {/* Unread indicator bar */}
-                    {!notif.is_read && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#10B981]"></div>
-                    )}
+                    <span className="material-symbols-outlined text-[22px]">{icon}</span>
+                  </div>
 
-                    <div className="p-4 sm:p-5 flex items-start gap-4">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${config.bg}`}
-                      >
-                        <span className={`material-symbols-outlined text-[20px] ${config.color}`}>
-                          {config.icon}
-                        </span>
-                      </div>
-
-                      <div className="flex-1 pr-14">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                          <h4
-                            className={`text-[15px] font-bold ${
-                              notif.is_read ? 'text-[#334155]' : 'text-[#0F172A]'
-                            }`}
-                          >
-                            {notif.title}
-                          </h4>
-                          <span className="text-[11px] font-medium text-[#94A3B8] whitespace-nowrap">
-                            {formatNotificationDate(notif.created_at)}
-                          </span>
-                        </div>
-                        <p
-                          className={`text-[13px] leading-relaxed ${
-                            notif.is_read ? 'text-[#64748B]' : 'text-[#334155] font-medium'
-                          }`}
-                        >
-                          {notif.message}
-                        </p>
-                      </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 pr-6">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h4 className="text-[15px] font-bold text-[#0F172A] leading-tight">
+                        {item.title}
+                      </h4>
+                      {!item.is_read && (
+                        <span className="w-2 h-2 rounded-full bg-[#10B981] inline-block shrink-0"></span>
+                      )}
+                      <span className="text-[11px] text-[#94A3B8] ml-auto">
+                        {formattedTime}
+                      </span>
                     </div>
 
-                    {/* Actions buttons */}
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => toggleRead(notif.id, notif.is_read)}
-                        className="w-8 h-8 rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#0F172A] flex items-center justify-center transition-colors"
-                        title={notif.is_read ? 'Marquer comme non lu' : 'Marquer comme lu'}
-                      >
-                        <span className="material-symbols-outlined text-[16px]">
-                          {notif.is_read ? 'mark_email_unread' : 'mark_email_read'}
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => deleteNotification(notif.id)}
-                        className="w-8 h-8 rounded-full bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] hover:text-[#DC2626] flex items-center justify-center transition-colors"
-                        title="Supprimer"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">delete</span>
-                      </button>
+                    <p className="text-[13px] text-[#475569] leading-relaxed">
+                      {item.message}
+                    </p>
+
+                    {/* Quick Link Actions */}
+                    <div className="flex items-center gap-3 mt-3">
+                      {item.type === 'departure' && (
+                        <Link
+                          href={`/${locale}/suivi/TK-LIVE`}
+                          className="inline-flex items-center gap-1 text-[12px] font-bold text-[#10B981] hover:underline"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">location_on</span>
+                          <span>Suivre le bus en direct</span>
+                        </Link>
+                      )}
+                      {item.type === 'booking' && (
+                        <Link
+                          href={`/${locale}/mon-billet`}
+                          className="inline-flex items-center gap-1 text-[12px] font-bold text-blue-600 hover:underline"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">confirmation_number</span>
+                          <span>Voir mon billet</span>
+                        </Link>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => deleteNotification(item.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-50 hover:text-rose-600 text-slate-400 transition-all absolute top-4 right-3"
+                    title="Supprimer la notification"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

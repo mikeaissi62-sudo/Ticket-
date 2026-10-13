@@ -11,6 +11,31 @@ export const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const [unreadNotifs, setUnreadNotifs] = useState<number>(0);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadNotifs(0);
+      return;
+    }
+    let isMounted = true;
+    async function fetchNotifs() {
+      try {
+        const res = await fetch('/api/notifications');
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.notifications) {
+            const unread = data.notifications.filter((n: any) => !n.is_read).length;
+            setUnreadNotifs(unread);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load notifications count in header:', err);
+      }
+    }
+    fetchNotifs();
+    return () => { isMounted = false; };
+  }, [user, pathname]);
 
   // Ne pas afficher le Header sur la page login ou register
   if (pathname.includes('/login') || pathname.includes('/register')) {
@@ -139,13 +164,18 @@ export const Header = () => {
               prefetch={true}
               aria-label="Notifications"
               title="Notifications"
-              className={`hidden sm:flex w-10 h-10 items-center justify-center rounded-xl transition-all active:scale-90 duration-75 shrink-0 ${
+              className={`hidden sm:flex w-10 h-10 items-center justify-center rounded-xl transition-all active:scale-90 duration-75 shrink-0 relative ${
                 isActive(`/${locale}/notifications`)
                   ? 'bg-primary text-on-primary'
                   : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/40'
               }`}
             >
               <span className="material-symbols-outlined text-[20px]">notifications</span>
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#10B981] text-white text-[10px] font-extrabold flex items-center justify-center shadow-sm border-2 border-white animate-scale-in">
+                  {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                </span>
+              )}
             </Link>
 
             {/* User Buttons: Logged In vs Visitor (Upwork Style) */}
@@ -289,14 +319,21 @@ export const Header = () => {
                 href={`/${locale}/notifications`} 
                 prefetch={true}
                 onClick={() => setMobileMenuOpen(false)} 
-                className={`px-4 py-3 rounded-xl text-[14px] font-semibold flex items-center gap-3 active:scale-98 transition-all duration-75 ${
+                className={`px-4 py-3 rounded-xl text-[14px] font-semibold flex items-center justify-between active:scale-98 transition-all duration-75 ${
                   isActive(`/${locale}/notifications`)
                     ? 'bg-primary/10 text-primary font-bold'
                     : 'text-[#475569] hover:bg-surface-container'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">notifications</span>
-                Notifications
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-[20px]">notifications</span>
+                  <span>Notifications</span>
+                </div>
+                {unreadNotifs > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-[#10B981] text-white text-[11px] font-bold">
+                    {unreadNotifs}
+                  </span>
+                )}
               </Link>
               <Link 
                 href={`/${locale}/profil`} 

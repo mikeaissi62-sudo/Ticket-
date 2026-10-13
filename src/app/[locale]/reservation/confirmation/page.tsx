@@ -22,8 +22,9 @@ export default function BookingConfirmationPage() {
   const name = searchParams.get('name') || 'Voyageur';
   const phone = searchParams.get('phone') || '01 54 65 89 07';
   const company = searchParams.get('company') || 'Confort Lines VIP';
+  const ref = searchParams.get('ref') || 'TK-78B451';
 
-  const bookingData = { from, to, date: dateParam, seat, payment, price, name, phone, company };
+  const bookingData = { ref, from, to, date: dateParam, seat, payment, price, name, phone, company };
 
   return (
     <main className="min-h-screen bg-surface pb-10 pt-6">
@@ -54,7 +55,7 @@ export default function BookingConfirmationPage() {
 
           {/* Colonne Latérale : Actions & Infos */}
           <div className="lg:col-span-4 space-y-space-lg">
-            <ActionButtons phone={phone} />
+            <ActionButtons phone={phone} data={bookingData} />
             <StationInfo from={from} />
             <ModifyBooking />
           </div>

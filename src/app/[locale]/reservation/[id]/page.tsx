@@ -97,6 +97,91 @@ export default function BookingPage() {
   const extraLuggagePrice = extraLuggage ? 1000 : 0;
   const totalPrice = basePrice + extraLuggagePrice;
   
+  const [momoSession, setMomoSession] = useState<{
+    paymentId: string;
+    provider: 'mtn_momo' | 'moov_money';
+    amount: number;
+    phone: string;
+    bookingRef: string;
+    confirmUrlParams: string;
+    countdown: number;
+    status: 'waiting_ussd' | 'confirming' | 'success' | 'failed';
+    errorMessage?: string;
+    otpInput?: string;
+  } | null>(null);
+
+  // Polling for Mobile Money transaction status and timer countdown
+  useEffect(() => {
+    if (!momoSession || momoSession.status === 'success' || momoSession.status === 'failed') return;
+
+    // Countdown interval
+    const timer = setInterval(() => {
+      setMomoSession((prev) => {
+        if (!prev) return null;
+        if (prev.countdown <= 1) {
+          clearInterval(timer);
+          return {
+            ...prev,
+            countdown: 0,
+            status: 'failed',
+            errorMessage: 'Délai d’attente USSD expiré (60s). Veuillez relancer le paiement.',
+          };
+        }
+        return { ...prev, countdown: prev.countdown - 1 };
+      });
+    }, 1000);
+
+    // Polling interval
+    const poller = setInterval(async () => {
+      if (!momoSession.paymentId) return;
+      try {
+        const res = await fetch(`/api/payments/${momoSession.paymentId}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'success') {
+            clearInterval(timer);
+            clearInterval(poller);
+            setMomoSession((prev) => prev ? { ...prev, status: 'success' } : null);
+            setTimeout(() => {
+              router.push(`/${locale}/reservation/confirmation?${momoSession.confirmUrlParams}&status=success`);
+            }, 1800);
+          } else if (data.status === 'failed') {
+            clearInterval(timer);
+            clearInterval(poller);
+            setMomoSession((prev) => prev ? { ...prev, status: 'failed', errorMessage: data.message || 'Paiement rejeté.' } : null);
+          }
+        }
+      } catch (err) {
+        console.error('Status poll error:', err);
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(poller);
+    };
+  }, [momoSession?.paymentId, momoSession?.status, locale, router]);
+
+  const handleManualConfirmPayment = async (otpCode?: string) => {
+    if (!momoSession) return;
+    setMomoSession((prev) => prev ? { ...prev, status: 'confirming' } : null);
+    try {
+      const url = `/api/payments/${momoSession.paymentId}/status?confirm=true${otpCode ? `&otp=${encodeURIComponent(otpCode)}` : ''}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (res.ok && (data.status === 'success' || data.success)) {
+        setMomoSession((prev) => prev ? { ...prev, status: 'success' } : null);
+        setTimeout(() => {
+          router.push(`/${locale}/reservation/confirmation?${momoSession.confirmUrlParams}&status=success`);
+        }, 1500);
+      } else {
+        setMomoSession((prev) => prev ? { ...prev, status: 'failed', errorMessage: data.error || 'Validation impossible.' } : null);
+      }
+    } catch {
+      setMomoSession((prev) => prev ? { ...prev, status: 'failed', errorMessage: 'Erreur réseau lors de la validation.' } : null);
+    }
+  };
+
   const handleSeatClick = (seat: string) => {
     setSelectedSeat(seat);
   };
@@ -106,18 +191,37 @@ export default function BookingPage() {
     const phoneEl = document.getElementById('phone') as HTMLInputElement;
     const emailEl = document.getElementById('email') as HTMLInputElement;
     
-    const firstName = nameEl?.value.split(' ')[0] || 'Voyageur';
-    const lastName = nameEl?.value.split(' ').slice(1).join(' ') || '';
-    const phone = phoneEl?.value || '';
+    const fullName = nameEl?.value.trim() || '';
+    const phone = phoneEl?.value.trim() || '';
+    const email = emailEl?.value.trim() || '';
+
+    if (!fullName) {
+      alert('Veuillez renseigner votre nom complet.');
+      nameEl?.focus();
+      return;
+    }
+
+    if (!phone || phone.length < 8) {
+      alert('Veuillez renseigner un numéro de téléphone béninois valide (ex: 97 12 34 56 ou +229 01...)');
+      phoneEl?.focus();
+      return;
+    }
+
+    const firstName = fullName.split(' ')[0] || 'Voyageur';
+    const lastName = fullName.split(' ').slice(1).join(' ') || '';
 
     setPassengerInfo({ firstName, lastName, phone, idType: 'cni' });
     setExtras(extraLuggage, true);
     setStorePaymentMethod(paymentMethod);
     selectSeats([parseInt(selectedSeat, 10)]);
 
-    // Try to create booking via Supabase API
+    setIsSubmitting(true);
+
+    let bookingId: string = '';
+    let bookingRef: string = `TK-BEN-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // Try to create booking via Supabase API if real trip
     if (!tripId.startsWith('sched-') && seats.length > 0) {
-      setIsSubmitting(true);
       try {
         const seatObj = seats.find(s => s.seat_number === parseInt(selectedSeat, 10));
         if (seatObj) {
@@ -137,35 +241,67 @@ export default function BookingPage() {
           });
           const data = await res.json();
           if (res.ok && data.booking) {
-            // Booking created successfully in Supabase
-            const confirmParams = new URLSearchParams({
-              from, to, date: dateParam, seat: selectedSeat,
-              payment: paymentMethod, price: totalPrice.toString(),
-              name: nameEl?.value || 'Voyageur', phone,
-              company: companyName, ref: data.booking.booking_reference || '',
-            }).toString();
-            router.push(`/${locale}/reservation/confirmation?${confirmParams}`);
-            return;
-          }
-          // If 401 (not logged in), continue with client-side flow
-          if (res.status !== 401) {
-            console.error('Booking API error:', data.error);
+            bookingId = data.booking.id;
+            bookingRef = data.booking.booking_reference || bookingRef;
           }
         }
       } catch (err) {
         console.error('Booking submission error:', err);
-      } finally {
-        setIsSubmitting(false);
       }
     }
 
-    // Fallback: redirect to confirmation without server booking
     const confirmParams = new URLSearchParams({
       from, to, date: dateParam, seat: selectedSeat,
       payment: paymentMethod, price: totalPrice.toString(),
-      name: nameEl?.value || 'Voyageur', phone, company: companyName,
+      name: fullName, phone, company: companyName, ref: bookingRef,
     }).toString();
-    router.push(`/${locale}/reservation/confirmation?${confirmParams}`);
+
+    // If payment is Mobile Money (MTN MoMo or Moov Money), initiate payment and show USSD prompt
+    if (paymentMethod === 'mtn' || paymentMethod === 'moov') {
+      try {
+        const initRes = await fetch('/api/payments/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            booking_id: bookingId || undefined,
+            booking_reference: bookingRef,
+            amount: totalPrice,
+            provider: paymentMethod === 'mtn' ? 'mtn_momo' : 'moov_money',
+            phone: phone,
+            phone_number: phone,
+            passenger_name: fullName,
+            passenger_email: email || undefined,
+          }),
+        });
+
+        const initData = await initRes.json();
+        setIsSubmitting(false);
+
+        const paymentId = initData.payment?.id || initData.payment_id;
+        if (initRes.ok && paymentId) {
+          setMomoSession({
+            paymentId,
+            provider: paymentMethod === 'mtn' ? 'mtn_momo' : 'moov_money',
+            amount: totalPrice,
+            phone,
+            bookingRef,
+            confirmUrlParams: confirmParams,
+            countdown: 60,
+            status: 'waiting_ussd',
+          });
+          return;
+        } else {
+          console.warn('Initiate returned error or fallback:', initData.error);
+        }
+      } catch (err) {
+        console.error('Payment initiation error:', err);
+      }
+    }
+
+    setIsSubmitting(false);
+
+    // Fallback: direct confirmation redirect for card or offline flow
+    router.push(`/${locale}/reservation/confirmation?${confirmParams}&status=success`);
   };
 
   const getSeatLabel = (seat: string) => {
@@ -648,6 +784,192 @@ export default function BookingPage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Money USSD / OTP Prompt Modal */}
+      {momoSession && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => {
+            if (momoSession.status !== 'confirming' && momoSession.status !== 'success') {
+              if (confirm('Voulez-vous annuler l’attente de paiement Mobile Money ?')) {
+                setMomoSession(null);
+              }
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Operator Header Bar */}
+            <div className={`-mx-6 -mt-6 sm:-mx-8 sm:-mt-8 p-5 mb-5 flex items-center justify-between ${
+              momoSession.provider === 'mtn_momo' 
+                ? 'bg-[#FFCC00] text-black' 
+                : 'bg-[#005CA9] text-white'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-black text-[18px]">
+                  {momoSession.provider === 'mtn_momo' ? 'M' : 'Flooz'}
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-[16px] leading-tight">
+                    {momoSession.provider === 'mtn_momo' ? 'MTN MoMo Bénin' : 'Moov Money Bénin'}
+                  </h4>
+                  <p className="text-[12px] opacity-85 font-medium">
+                    Paiement sécurisé par USSD Push
+                  </p>
+                </div>
+              </div>
+              <span className="font-mono text-[14px] font-bold px-3 py-1 rounded-full bg-white/25 backdrop-blur-sm">
+                {momoSession.countdown}s
+              </span>
+            </div>
+
+            {momoSession.status === 'success' ? (
+              <div className="py-6 text-center animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-[36px]">check_circle</span>
+                </div>
+                <h3 className="text-[20px] font-black text-[#0F172A] mb-1">
+                  Paiement Validé avec Succès !
+                </h3>
+                <p className="text-[14px] text-slate-600 mb-2">
+                  Votre transaction de <strong>{momoSession.amount.toLocaleString('fr-FR')} FCFA</strong> est confirmée.
+                </p>
+                <p className="text-[12px] text-slate-400">
+                  Génération de votre billet en cours...
+                </p>
+              </div>
+            ) : momoSession.status === 'failed' ? (
+              <div className="py-4 text-center">
+                <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center mb-3">
+                  <span className="material-symbols-outlined text-[30px]">error</span>
+                </div>
+                <h3 className="text-[18px] font-bold text-[#0F172A] mb-1">
+                  Paiement non finalisé
+                </h3>
+                <p className="text-[13px] text-slate-600 mb-5">
+                  {momoSession.errorMessage || 'La transaction n’a pas pu être validée dans les délais impartis.'}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setMomoSession(null)}
+                    className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[13px] transition-all"
+                  >
+                    Changer de moyen
+                  </button>
+                  <button
+                    onClick={() => handleManualConfirmPayment()}
+                    className="flex-1 py-2.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-[13px] transition-all"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Active Phone & USSD instructions */}
+                <div className="text-center mb-5">
+                  <div className="relative inline-flex items-center justify-center mb-3">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center shadow-inner">
+                      <span className="material-symbols-outlined text-[32px] animate-pulse">phonelink_ring</span>
+                    </div>
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+                    </span>
+                  </div>
+
+                  <h3 className="text-[18px] font-extrabold text-[#0F172A] mb-1">
+                    Invitation USSD envoyée
+                  </h3>
+                  <p className="text-[13px] text-slate-600">
+                    au numéro <strong className="text-[#0F172A]">{momoSession.phone}</strong>
+                  </p>
+                </div>
+
+                {/* Step guide */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5 mb-5 text-[12px] text-slate-700">
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                    <span>Consultez l’écran de votre téléphone portable.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                    <span>
+                      {momoSession.provider === 'mtn_momo' ? (
+                        <>Composez votre <strong>code secret MTN MoMo</strong> pour autoriser le prélèvement de <strong>{momoSession.amount.toLocaleString('fr-FR')} FCFA</strong>.</>
+                      ) : (
+                        <>Validez la demande <strong>Moov Money (*855#)</strong> avec votre code secret pour autoriser <strong>{momoSession.amount.toLocaleString('fr-FR')} FCFA</strong>.</>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                    <span>Cette fenêtre se validera automatiquement dès confirmation du réseau.</span>
+                  </div>
+                </div>
+
+                {/* Optional OTP input for Moov Money */}
+                {momoSession.provider === 'moov_money' && (
+                  <div className="mb-4">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                      Code d&apos;autorisation Moov OTP (Optionnel)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Ex: 123456"
+                        maxLength={8}
+                        value={momoSession.otpInput || ''}
+                        onChange={(e) => setMomoSession((prev) => prev ? { ...prev, otpInput: e.target.value } : null)}
+                        className="flex-1 px-3 py-2 text-[13px] bg-slate-100 rounded-xl border border-slate-200 outline-none focus:border-[#005CA9]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleManualConfirmPayment(momoSession.otpInput)}
+                        className="px-4 py-2 bg-[#005CA9] text-white text-[12px] font-bold rounded-xl hover:bg-[#004A87] transition-all"
+                      >
+                        Valider OTP
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    disabled={momoSession.status === 'confirming'}
+                    onClick={() => handleManualConfirmPayment()}
+                    className="w-full py-3 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-[13px] flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-60"
+                  >
+                    {momoSession.status === 'confirming' ? (
+                      <>
+                        <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                        <span>Vérification réseau...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[18px]">verified</span>
+                        <span>J&apos;ai validé sur mon téléphone</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMomoSession(null)}
+                    className="w-full py-2.5 rounded-xl text-slate-500 hover:text-slate-700 text-[12px] font-semibold transition-colors"
+                  >
+                    Annuler et choisir un autre moyen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
