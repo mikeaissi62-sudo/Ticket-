@@ -150,21 +150,6 @@ export async function middleware(request: NextRequest) {
     (c) => c.name.includes('sb-') || c.name.includes('supabase')
   );
 
-  // Redirection : Utilisateur déjà connecté tentant d'accéder à /login ou /register
-  if (isLoginPage && hasAuthCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}`;
-    return NextResponse.redirect(url);
-  }
-
-  // Protection Voyageur : Non authentifié sur route voyageur protégée
-  if (isTravelerProtected && !hasAuthCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/login`;
-    url.searchParams.set('redirect', basePath);
-    return NextResponse.redirect(url);
-  }
-
   // Si route publique et pas de cookie d'authentification, retourner directement
   if (isPublic && !hasAuthCookie) {
     return intlResponse;
@@ -210,6 +195,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Intercepter les pages localisées ainsi que /partner et /admin
-  matcher: ['/', '/(fr|en)/:path*', '/partner/:path*', '/admin/:path*'],
+  // Intercepter toutes les requêtes d'application sauf api, _next et fichiers statiques (images, fonts, etc.)
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 };

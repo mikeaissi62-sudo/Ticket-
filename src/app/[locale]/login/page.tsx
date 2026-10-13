@@ -72,12 +72,15 @@ export default function LoginPage() {
   // Se souvenir de moi
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Check if already logged in -> redirect directly to destination or home
+  const [currentUser, setCurrentUser] = useState<{ email?: string; id?: string } | null>(null);
+
+  // Check session state
   useEffect(() => {
     async function checkSession() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          setCurrentUser({ email: session.user.email, id: session.user.id });
           const searchParams = new URLSearchParams(window.location.search);
           const redirectParam = searchParams.get('redirect');
           if (redirectParam) {
@@ -90,8 +93,8 @@ export default function LoginPage() {
             router.replace(`/${locale}${target}`);
             return;
           }
-          router.replace(`/${locale}`);
-          return;
+          // Do not force-redirect to home so the user can switch accounts, 
+          // use the test buttons, or sign out.
         }
       } catch {
         // Continue to login page
@@ -101,6 +104,14 @@ export default function LoginPage() {
     }
     checkSession();
   }, [locale, router, supabase]);
+
+  const handleSignOut = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setAuthSuccess('Déconnexion réussie. Vous pouvez vous reconnecter.');
+    setIsLoading(false);
+  };
 
   // OTP Countdown timer
   useEffect(() => {
@@ -552,6 +563,26 @@ export default function LoginPage() {
                   <span>Google</span>
                 </button>
               </div>
+
+              {/* Active session info */}
+              {currentUser && (
+                <div className="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[13px] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="material-symbols-outlined text-[18px] text-amber-600 shrink-0">account_circle</span>
+                    <span className="truncate">
+                      Connecté : <strong>{currentUser.email}</strong>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={isLoading}
+                    className="shrink-0 px-2.5 py-1 bg-amber-200/70 hover:bg-amber-300 text-amber-900 rounded-lg text-[12px] font-bold transition-all"
+                  >
+                    Déconnexion
+                  </button>
+                </div>
+              )}
 
               {/* Error & Success alerts */}
               {authError && (
