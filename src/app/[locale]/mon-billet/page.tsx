@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
+import { TicketCard } from '@/components/traveler/booking/confirmation/TicketCard';
 
 interface Ticket {
   id: string;
@@ -354,81 +355,59 @@ export default function MonBilletPage() {
         </div>
       )}
 
-      {/* Modal QR Code */}
+      {/* Modal Ticket & QR Code Officiel */}
       {selectedQrTicket && (
         <div 
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
           onClick={() => setSelectedQrTicket(null)}
         >
           <div 
-            className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl relative"
+            className="relative w-full max-w-[500px] my-auto"
             onClick={e => e.stopPropagation()}
           >
-            <button 
-              onClick={() => setSelectedQrTicket(null)}
-              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-
-            <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold mb-3 border border-emerald-200">
-              TITRE VALIDÉ • {selectedQrTicket.companyName}
-            </span>
-
-            <h3 className="text-[20px] font-extrabold text-[#0F172A] mb-1">
-              {selectedQrTicket.from} ➔ {selectedQrTicket.to}
-            </h3>
-            <p className="text-[13px] text-[#64748B] mb-5">
-              Réf : <strong>{selectedQrTicket.ref}</strong> • Siège N° <strong>{selectedQrTicket.seat}</strong>
-            </p>
-
-            {/* High-fidelity QR Code simulation */}
-            <div className="bg-slate-50 p-5 rounded-2xl border-2 border-dashed border-[#CBD5E1] inline-block mb-5">
-              <div className="w-48 h-48 bg-white p-3 rounded-xl shadow-inner flex flex-col items-center justify-center relative">
-                {/* SVG QR Code Pattern */}
-                <svg viewBox="0 0 100 100" className="w-full h-full text-[#0F172A]" fill="currentColor">
-                  {/* Corners */}
-                  <rect x="5" y="5" width="25" height="25" rx="3" fill="#0F172A"/>
-                  <rect x="8" y="8" width="19" height="19" rx="2" fill="white"/>
-                  <rect x="12" y="12" width="11" height="11" rx="1" fill="#0F172A"/>
-
-                  <rect x="70" y="5" width="25" height="25" rx="3" fill="#0F172A"/>
-                  <rect x="73" y="8" width="19" height="19" rx="2" fill="white"/>
-                  <rect x="77" y="12" width="11" height="11" rx="1" fill="#0F172A"/>
-
-                  <rect x="5" y="70" width="25" height="25" rx="3" fill="#0F172A"/>
-                  <rect x="8" y="73" width="19" height="19" rx="2" fill="white"/>
-                  <rect x="12" y="77" width="11" height="11" rx="1" fill="#0F172A"/>
-
-                  {/* Body elements */}
-                  <rect x="35" y="10" width="8" height="8" rx="1"/>
-                  <rect x="48" y="15" width="8" height="8" rx="1"/>
-                  <rect x="38" y="25" width="15" height="6" rx="1"/>
-                  <rect x="10" y="38" width="10" height="10" rx="1"/>
-                  <rect x="25" y="42" width="8" height="8" rx="1"/>
-                  <rect x="40" y="38" width="20" height="20" rx="2" fill="#10B981"/>
-                  <circle cx="50" cy="48" r="4" fill="white"/>
-                  <rect x="68" y="38" width="8" height="8" rx="1"/>
-                  <rect x="80" y="45" width="12" height="6" rx="1"/>
-                  <rect x="38" y="65" width="10" height="10" rx="1"/>
-                  <rect x="55" y="68" width="8" height="8" rx="1"/>
-                  <rect x="70" y="65" width="10" height="10" rx="1"/>
-                  <rect x="45" y="82" width="15" height="8" rx="1"/>
-                  <rect x="75" y="80" width="15" height="8" rx="1"/>
-                </svg>
-              </div>
-            </div>
-
-            <p className="text-[12px] text-[#64748B] mb-5 leading-relaxed">
-              Présentez cet écran au contrôleur de bord lors de la montée dans l&apos;autocar.
-            </p>
-
-            <div className="flex gap-2">
+            {/* Bouton fermeture flottant */}
+            <div className="flex justify-end mb-2">
               <button 
                 onClick={() => setSelectedQrTicket(null)}
-                className="w-full py-3 rounded-xl bg-[#0F172A] text-white text-[13px] font-bold hover:bg-[#1E293B] transition-all"
+                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all backdrop-blur-sm"
+                aria-label="Fermer"
               >
-                Fermer
+                <span className="material-symbols-outlined text-[22px]">close</span>
+              </button>
+            </div>
+
+            {/* Le billet fidèle */}
+            <TicketCard 
+              data={{
+                ref: selectedQrTicket.ref,
+                from: selectedQrTicket.from,
+                to: selectedQrTicket.to,
+                date: selectedQrTicket.date,
+                departure: selectedQrTicket.departure,
+                seat: selectedQrTicket.seat,
+                price: selectedQrTicket.price,
+                name: selectedQrTicket.passenger || 'Voyageur',
+                payment: selectedQrTicket.payment,
+                company: selectedQrTicket.companyName,
+                isFlexible: selectedQrTicket.isFlexible,
+              }}
+            />
+
+            {/* Actions rapides sous le billet */}
+            <div className="flex items-center justify-center gap-3 mt-4 print:hidden">
+              <button
+                onClick={() => handleDownloadPdf(selectedQrTicket)}
+                className="px-4 py-2.5 rounded-xl bg-white text-[#0B1324] text-[13px] font-bold hover:bg-slate-100 transition-all flex items-center gap-2 shadow-lg"
+              >
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                Télécharger PDF
+              </button>
+              <button
+                onClick={() => handleSendWhatsApp(selectedQrTicket)}
+                className="px-4 py-2.5 rounded-xl bg-[#00D084] text-white text-[13px] font-bold hover:bg-[#00B874] transition-all flex items-center gap-2 shadow-lg"
+              >
+                <span className="material-symbols-outlined text-[18px]">chat</span>
+                WhatsApp
               </button>
             </div>
           </div>

@@ -31,7 +31,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ phone, data }) => 
     }, 6000);
   };
 
-  const bookingRef = data?.ref || 'TK-78B451';
+  const bookingRef = data?.ref && data.ref.startsWith('TK')
+    ? data.ref
+    : (data?.ref ? `TKP-${data.ref}` : 'TKP-2026-9812');
   const passengerPhone = phone || data?.phone || '01 54 65 89 07';
 
   // Envoi WhatsApp via backend API

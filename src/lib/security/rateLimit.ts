@@ -15,12 +15,12 @@ const rateLimitStore = new Map<string, RateLimitRecord>();
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, record] of rateLimitStore.entries()) {
+    rateLimitStore.forEach((record, key) => {
       // Si la dernière requête date de plus de 10 minutes, supprimer la clé
       if (record.timestamps.length === 0 || now - record.timestamps[record.timestamps.length - 1] > 600000) {
         rateLimitStore.delete(key);
       }
-    }
+    });
   }, 300000);
 }
 

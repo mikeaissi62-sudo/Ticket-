@@ -9,7 +9,7 @@ export const contactSchema = z.object({
     .string()
     .min(2, 'Votre nom complet doit comporter au moins 2 caractères.')
     .max(80, 'Nom trop long.')
-    .regex(/^[\p{L}\s\-']+$/u, 'Le nom contient des caractères non autorisés.'),
+    .regex(/^[a-zA-ZÀ-ÿ\s\-']+$/, 'Le nom contient des caractères non autorisés.'),
   email: z.string().email('Adresse email invalide.'),
   phone: z
     .string()

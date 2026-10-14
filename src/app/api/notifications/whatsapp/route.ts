@@ -19,7 +19,9 @@ export async function POST(request: NextRequest) {
       station = 'Gare Étoile Rouge'
     } = body;
 
-    const bookingRef = ref || `TK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const bookingRef = ref && String(ref).startsWith('TK') 
+      ? String(ref) 
+      : (ref ? `TKP-${ref}` : 'TKP-2026-9812');
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const recipientPhone = cleanPhone.startsWith('229') ? cleanPhone : `229${cleanPhone}`;
 
@@ -27,26 +29,27 @@ export async function POST(request: NextRequest) {
       ? new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
       : 'Date confirmée';
 
-    // Formatage officiel du message WhatsApp Ticket+ Bénin
+    // Formatage officiel clair et structuré du message WhatsApp Ticket+ Bénin
     const whatsappMessage = `🎫 *E-BILLET OFFICIEL TICKET+ BÉNIN*
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ *Réservation confirmée* : *${bookingRef}*
-🏢 *Compagnie* : ${company}
+🏢 *Compagnie* : *${company}*
 🛣️ *Trajet* : *${from}* ➔ *${to}*
 📅 *Date de départ* : ${formattedDate}
-⏰ *Heure de départ* : *${departure}* (Présentation 30 min avant)
+⏰ *Départ* : *${departure}* (Présentation 30 min avant)
 📍 *Gare d'embarquement* : ${station}
-💺 *Place réservée* : Siège N° *${seat}*
-👤 *Passager* : ${name}
-💰 *Montant réglé* : ${Number(price).toLocaleString('fr-FR')} FCFA
+💺 *Siège Réservé* : *N° ${seat} (Fenêtre)*
+👤 *Voyageur* : ${name}
+💳 *Paiement* : MTN MoMo (Payé)
+💰 *Montant* : ${Number(price).toLocaleString('fr-FR')} FCFA
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-📲 *QR Code & E-billet officiel* :
-https://ticketplus.bj/fr/mon-billet
+📲 *Visualiser & Scanner votre QR Code* :
+https://ticketplus.bj/fr/mon-billet?ref=${encodeURIComponent(bookingRef)}
 ━━━━━━━━━━━━━━━━━━━━━━━━
-ℹ️ *Bagages* : 1 valise en soute incluse (25 kg).
-📞 *Assistance Voyageur Ticket+* : +229 01 54 65 89 07
-Bon voyage sur les lignes nationales du Bénin !`;
+ℹ️ *Bagages* : 1 valise en soute (25 kg) + 1 bagage cabine.
+📞 *Assistance Voyageur 24/7* : +229 01 54 65 89 07
+Bon voyage avec Ticket+ !`;
 
     const whatsappUrl = `https://wa.me/${recipientPhone}?text=${encodeURIComponent(whatsappMessage)}`;
 

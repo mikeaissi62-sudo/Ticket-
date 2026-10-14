@@ -7,9 +7,7 @@ import { z } from 'zod';
 export const initiatePaymentSchema = z.object({
   booking_id: z.string().min(1, 'La réservation ou sa référence est obligatoire.'),
   booking_reference: z.string().optional(),
-  provider: z.enum(['mtn_momo', 'moov_money', 'card'], {
-    errorMap: () => ({ message: 'Moyen de paiement non pris en charge (mtn_momo, moov_money ou card).' }),
-  }),
+  provider: z.enum(['mtn_momo', 'moov_money', 'card']),
   phone: z
     .string()
     .min(8, 'Le numéro de téléphone est obligatoire.')

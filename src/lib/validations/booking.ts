@@ -11,12 +11,12 @@ export const createBookingSchema = z.object({
     .string()
     .min(2, 'Le prénom doit comporter au moins 2 caractères.')
     .max(50, 'Le prénom ne peut excéder 50 caractères.')
-    .regex(/^[\p{L}\s\-']+$/u, 'Le prénom contient des caractères non autorisés.'),
+    .regex(/^[a-zA-ZÀ-ÿ\s\-']+$/, 'Le prénom contient des caractères non autorisés.'),
   passenger_last_name: z
     .string()
     .min(2, 'Le nom doit comporter au moins 2 caractères.')
     .max(50, 'Le nom ne peut excéder 50 caractères.')
-    .regex(/^[\p{L}\s\-']+$/u, 'Le nom contient des caractères non autorisés.'),
+    .regex(/^[a-zA-ZÀ-ÿ\s\-']+$/, 'Le nom contient des caractères non autorisés.'),
   passenger_phone: z
     .string()
     .min(8, 'Le numéro de téléphone est invalide.')

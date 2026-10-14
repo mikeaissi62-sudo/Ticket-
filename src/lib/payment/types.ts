@@ -5,7 +5,7 @@ export interface PaymentInitiateRequest {
   booking_id: string;
   provider: PaymentProvider;
   phone: string;
-  amount: number;
+  amount?: number;
   otp?: string; // Requis pour Moov Money
 }
 

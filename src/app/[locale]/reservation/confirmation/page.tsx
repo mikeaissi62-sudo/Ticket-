@@ -27,11 +27,11 @@ export default function BookingConfirmationPage() {
   const bookingData = { ref, from, to, date: dateParam, seat, payment, price, name, phone, company };
 
   return (
-    <main className="min-h-screen bg-surface pb-10 pt-6">
-      <div className="max-w-[1140px] mx-auto px-4 md:px-6">
+    <main className="min-h-screen bg-surface pb-10 pt-6 print:p-0 print:m-0 print:bg-white print:min-h-0">
+      <div className="max-w-[1140px] mx-auto px-4 md:px-6 print:p-0 print:max-w-none">
         
-        {/* En-tête de page (Retour) */}
-        <div className="mb-space-lg flex items-center justify-between">
+        {/* En-tête de page (Retour) - Masqué à l'impression */}
+        <div className="print:hidden mb-space-lg flex items-center justify-between">
           <Link href={`/${locale}`} className="flex items-center gap-2 text-on-surface hover:text-primary transition-colors font-label-lg text-label-lg font-medium group">
             <div className="w-10 h-10 rounded-full bg-surface-container-low group-hover:bg-primary-container flex items-center justify-center transition-colors">
               <span className="material-symbols-outlined text-[20px] group-hover:text-on-primary-container">arrow_back</span>
@@ -44,17 +44,19 @@ export default function BookingConfirmationPage() {
           </a>
         </div>
 
-        {/* Composant de validation / succès */}
-        <ConfirmationHeader />
+        {/* Composant de validation / succès - Masqué à l'impression */}
+        <div className="print:hidden">
+          <ConfirmationHeader />
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg print:block">
           {/* Colonne Principale : Le Billet */}
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 flex justify-center print:w-full">
             <TicketCard data={bookingData} />
           </div>
 
-          {/* Colonne Latérale : Actions & Infos */}
-          <div className="lg:col-span-4 space-y-space-lg">
+          {/* Colonne Latérale : Actions & Infos - Masquée à l'impression */}
+          <div className="print:hidden lg:col-span-4 space-y-space-lg">
             <ActionButtons phone={phone} data={bookingData} />
             <StationInfo from={from} />
             <ModifyBooking />

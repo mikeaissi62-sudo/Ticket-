@@ -16,14 +16,16 @@ export async function POST(request: NextRequest) {
       phone = '0154658907'
     } = body;
 
-    const bookingRef = ref || `TK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const bookingRef = ref && String(ref).startsWith('TK') 
+      ? String(ref) 
+      : (ref ? `TKP-${ref}` : 'TKP-2026-9812');
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const recipientPhone = cleanPhone.startsWith('229') ? cleanPhone : `229${cleanPhone}`;
 
-    const dateStr = date ? new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : 'prochain';
+    const dateStr = date ? new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : 'aujourd’hui';
 
-    // SMS standard télécom béninois (optimisé < 160 car.)
-    const smsMessage = `Ticket+ : Réservation ${bookingRef} confirmée. ${from}->${to} le ${dateStr} à ${departure} (${company}). Siège ${seat}. Billet: ticketplus.bj/fr/mon-billet`;
+    // SMS standard télécom béninois clair et concis (avec référence officielle et siège)
+    const smsMessage = `Ticket+ Bénin: E-billet ${bookingRef} CONFIRMÉ. ${from} -> ${to} le ${dateStr} à ${departure} (${company}). Siège N°${seat}. Voyageur: ${body.name || 'Passager'}. Billet & QR: ticketplus.bj/fr/mon-billet?ref=${bookingRef}`;
 
     // Simulation ou envoi réel selon PHONE_OTP_MODE
     const isLiveMode = process.env.PHONE_OTP_MODE === 'prod';
