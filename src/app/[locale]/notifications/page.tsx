@@ -30,9 +30,30 @@ export default function NotificationsCenterPage() {
     setTimeout(() => setActionFeedback(null), 4000);
   };
 
+  // Helper : lire les IDs supprimés du localStorage
+  const getDeletedIds = useCallback((): Set<string> => {
+    try {
+      const raw = localStorage.getItem('ticketplus_deleted_notification_ids');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return new Set(arr);
+      }
+    } catch {}
+    return new Set();
+  }, []);
+
+  const addDeletedIds = useCallback((...ids: string[]) => {
+    const current = getDeletedIds();
+    ids.forEach(id => current.add(id));
+    try {
+      localStorage.setItem('ticketplus_deleted_notification_ids', JSON.stringify([...current]));
+    } catch {}
+  }, [getDeletedIds]);
+
   const loadNotifications = useCallback(async () => {
     setIsLoading(true);
     let allNotifs: NotificationItem[] = [];
+    const deletedIds = getDeletedIds();
 
     // 1. Lire d'abord les notifications locales
     try {
@@ -40,29 +61,36 @@ export default function NotificationsCenterPage() {
       if (localRaw) {
         const parsed = JSON.parse(localRaw);
         if (Array.isArray(parsed)) {
-          allNotifs = parsed.map((n: any) => ({
-            id: n.id || `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            title: n.title || 'Notification Ticket+',
-            message: n.message || '',
-            type: (n.type || 'booking') as NotificationItem['type'],
-            is_read: !!n.is_read,
-            created_at: n.created_at || new Date().toISOString(),
-            booking_ref: n.booking_ref,
-          }));
+          allNotifs = parsed
+            .filter((n: any) => !deletedIds.has(n.id))
+            .map((n: any) => ({
+              id: n.id || `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+              title: n.title || 'Notification Ticket+',
+              message: n.message || '',
+              type: (n.type || 'booking') as NotificationItem['type'],
+              is_read: !!n.is_read,
+              created_at: n.created_at || new Date().toISOString(),
+              booking_ref: n.booking_ref,
+            }));
         }
       }
 
       // S'assurer que chaque réservation présente dans ticketplus_guest_bookings a sa notification
+      // SAUF si elle a été explicitement supprimée par l'utilisateur
       const bookingsRaw = localStorage.getItem('ticketplus_guest_bookings');
       if (bookingsRaw) {
         const guestBookings = JSON.parse(bookingsRaw);
         if (Array.isArray(guestBookings)) {
           guestBookings.forEach((b: any) => {
+            const synthId = `notif-booking-${b.ref}`;
+            // Ne pas recréer si l'utilisateur a supprimé cette notification
+            if (deletedIds.has(synthId)) return;
+
             const hasNotif = allNotifs.some(n => (b.ref && n.booking_ref === b.ref) || (b.ref && n.title.includes(b.ref)));
             if (!hasNotif && b.ref) {
               const isCancelled = b.status === 'cancelled';
               const synthNotif: NotificationItem = {
-                id: `notif-booking-${b.ref}`,
+                id: synthId,
                 title: isCancelled
                   ? `Billet Annulé & Remboursé (${b.ref})`
                   : `Billet Réservé avec succès (${b.ref})`,
@@ -98,7 +126,7 @@ export default function NotificationsCenterPage() {
           const seenIds = new Set(allNotifs.map(n => n.id));
           
           apiNotifs.forEach((an) => {
-            if (!seenIds.has(an.id) && (!an.booking_ref || !seenRefs.has(an.booking_ref))) {
+            if (!deletedIds.has(an.id) && !seenIds.has(an.id) && (!an.booking_ref || !seenRefs.has(an.booking_ref))) {
               allNotifs.push(an);
             }
           });
@@ -121,7 +149,7 @@ export default function NotificationsCenterPage() {
 
     setNotifications(allNotifs);
     setIsLoading(false);
-  }, [supabase]);
+  }, [supabase, getDeletedIds]);
 
   useEffect(() => {
     loadNotifications();
@@ -194,6 +222,9 @@ export default function NotificationsCenterPage() {
   const deleteNotification = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
+      // Enregistrer l'ID comme supprimé pour ne pas le régénérer
+      addDeletedIds(id);
+
       const updated = notifications.filter(n => n.id !== id);
       setNotifications(updated);
       try {
@@ -214,6 +245,10 @@ export default function NotificationsCenterPage() {
 
   const deleteAllNotifications = async () => {
     try {
+      // Enregistrer tous les IDs comme supprimés pour ne pas les régénérer
+      const allIds = notifications.map(n => n.id);
+      addDeletedIds(...allIds);
+
       setNotifications([]);
       try {
         localStorage.setItem('ticketplus_notifications', JSON.stringify([]));
