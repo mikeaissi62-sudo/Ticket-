@@ -40,70 +40,6 @@ const FAQ_ITEMS: FaqItem[] = [
 ];
 
 // Avis clients réalistes
-interface ReviewItem {
-  id: string;
-  name: string;
-  role: string;
-  city: string;
-  avatar: string;
-  rating: number;
-  route: string;
-  company: string;
-  date: string;
-  comment: string;
-}
-
-const REVIEWS: ReviewItem[] = [
-  {
-    id: '1',
-    name: 'Astride K.',
-    role: 'Cadre Commerciale',
-    city: 'Cotonou',
-    avatar: '👩🏾‍💼',
-    rating: 5,
-    route: 'Cotonou ➔ Parakou',
-    company: 'Confort Lines VIP',
-    date: 'Il y a 3 jours',
-    comment: "J'emprunte la ligne Cotonou-Parakou deux fois par mois. Réserver la veille depuis mon lit et payer par MTN MoMo m'a fait gagner un temps précieux. Billet reçu sur WhatsApp en 10 secondes et place VIP garantie !"
-  },
-  {
-    id: '2',
-    name: 'Marc Dossou',
-    role: 'Entrepreneur Agro',
-    city: 'Parakou',
-    avatar: '👨🏾‍💻',
-    rating: 5,
-    route: 'Parakou ➔ Cotonou',
-    company: 'Baobab Express',
-    date: 'Il y a 5 jours',
-    comment: "Avant Ticket+, je devais envoyer un coursier à la gare pour m'acheter un ticket en avance. Maintenant, je choisis mon siège sur mon téléphone et le rappel SMS 2h avant le départ m'évite tout stress."
-  },
-  {
-    id: '3',
-    name: 'Sèna B.',
-    role: 'Étudiante en Médecine',
-    city: 'Abomey-Calavi',
-    avatar: '👩🏾‍🎓',
-    rating: 5,
-    route: 'Cotonou ➔ Bohicon',
-    company: 'STM Voyageurs',
-    date: 'La semaine dernière',
-    comment: "Super simple d'utilisation. Même ma maman a réussi à réserver son billet toute seule pour aller voir la famille à Bohicon. Le contrôleur a scanné le QR Code directement sur son téléphone sans problème."
-  },
-  {
-    id: '4',
-    name: 'Éric Houndété',
-    role: 'Consultant en Développement',
-    city: 'Natitingou',
-    avatar: '👨🏾‍🏫',
-    rating: 5,
-    route: 'Cotonou ➔ Natitingou',
-    company: 'ATT Transports',
-    date: 'Il y a 2 semaines',
-    comment: "La transparence sur les tarifs et pouvoir comparer tous les départs du jour sur un seul écran, c'est ce qui manquait au secteur du transport au Bénin. Bravo pour ce travail d'excellence !"
-  }
-];
-
 // Flottes partenaires
 const PARTNERS = [
   {
@@ -619,74 +555,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* 6. AVIS CLIENTS & TÉMOIGNAGES (UPWORK-STYLE REVIEWS)          */}
-      {/* ============================================================ */}
-      <section id="avis" className="py-16 sm:py-24 bg-white border-b border-slate-200/80">
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-4">
-            <div>
-              <span className="text-[12px] font-extrabold uppercase tracking-widest text-[#10B981] mb-2 block">
-                Témoignages authentiques
-              </span>
-              <h2 className="text-[30px] sm:text-[38px] font-black text-[#0F172A] tracking-tight leading-tight">
-                Ce que nos voyageurs disent de Ticket+
-              </h2>
-              <p className="text-[15px] text-slate-600 mt-2">
-                Découvrez les retours d&apos;expérience de personnes qui voyagent chaque semaine au Bénin.
-              </p>
-            </div>
 
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-2xl shrink-0">
-              <div className="flex text-amber-500 text-[16px]">★★★★★</div>
-              <span className="text-[13px] font-bold text-slate-800">4.9 / 5 sur Google &amp; Réseaux</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {REVIEWS.map((rev) => (
-              <div
-                key={rev.id}
-                className="bg-slate-50/70 rounded-3xl p-6 border border-slate-200/80 flex flex-col justify-between hover:border-emerald-300 hover:shadow-md transition-all"
-              >
-                <div>
-                  {/* Rating + Route */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex text-amber-500 text-[14px]">
-                      {'★'.repeat(rev.rating)}
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-semibold">{rev.date}</span>
-                  </div>
-
-                  <p className="text-[13px] text-slate-700 leading-relaxed italic mb-4">
-                    &ldquo;{rev.comment}&rdquo;
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-slate-200/60">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[18px] shadow-xs">
-                      {rev.avatar}
-                    </div>
-                    <div>
-                      <h4 className="text-[13px] font-extrabold text-[#0F172A] leading-tight">{rev.name}</h4>
-                      <p className="text-[11px] text-slate-500">{rev.role} • {rev.city}</p>
-                    </div>
-                  </div>
-
-                  <div className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[10px] font-bold text-emerald-800 flex items-center justify-between">
-                    <span>{rev.route}</span>
-                    <span className="text-slate-400">{rev.company}</span>
-                  </div>
-                </div>
-
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
 
       {/* ============================================================ */}
       {/* 7. ESPACE TRANSPORTEURS / COMPAGNIES (UPWORK ENTERPRISE STYLE)*/}
