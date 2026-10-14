@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/client';
 
 export const Header = () => {
   const locale = useLocale();
@@ -16,17 +17,35 @@ export const Header = () => {
 
   useEffect(() => {
     let isMounted = true;
+    const supabase = createClient();
 
     const refreshCounts = async () => {
       // 1. Billets locaux et notifications locales
+      let deletedIds = new Set<string>();
+      let localReadIds = new Set<string>();
       let localUnread = 0;
       let localActiveTickets = 0;
+
       try {
+        const rawDeleted = localStorage.getItem('ticketplus_deleted_notification_ids');
+        if (rawDeleted) {
+          const arr = JSON.parse(rawDeleted);
+          if (Array.isArray(arr)) {
+            deletedIds = new Set(arr);
+          }
+        }
+
         const rawNotifs = localStorage.getItem('ticketplus_notifications');
         if (rawNotifs) {
           const parsed = JSON.parse(rawNotifs);
-          localUnread = parsed.filter((n: any) => !n.is_read).length;
+          if (Array.isArray(parsed)) {
+            parsed.forEach((n: any) => {
+              if (n.is_read) localReadIds.add(n.id);
+            });
+            localUnread = parsed.filter((n: any) => !deletedIds.has(n.id) && !n.is_read).length;
+          }
         }
+
         const rawBookings = localStorage.getItem('ticketplus_guest_bookings');
         if (rawBookings) {
           const parsedB = JSON.parse(rawBookings);
@@ -48,8 +67,8 @@ export const Header = () => {
       // Si connecté, synchroniser avec les réservations et notifications de l'utilisateur
       try {
         const [notifsRes, bookingsRes] = await Promise.all([
-          fetch('/api/notifications'),
-          fetch('/api/bookings')
+          fetch('/api/notifications', { cache: 'no-store' }),
+          fetch('/api/bookings', { cache: 'no-store' })
         ]);
 
         let unread = 0;
@@ -57,14 +76,15 @@ export const Header = () => {
 
         if (notifsRes.ok) {
           const data = await notifsRes.json();
-          if (isMounted && data.notifications) {
-            unread = data.notifications.filter((n: any) => !n.is_read).length;
+          if (isMounted && data.notifications && Array.isArray(data.notifications)) {
+            const validNotifs = data.notifications.filter((n: any) => !deletedIds.has(n.id));
+            unread = validNotifs.filter((n: any) => !n.is_read && !localReadIds.has(n.id)).length;
           }
         }
 
         if (bookingsRes.ok) {
           const bData = await bookingsRes.json();
-          if (isMounted && bData.bookings) {
+          if (isMounted && bData.bookings && Array.isArray(bData.bookings)) {
             active = bData.bookings.filter((b: any) => b.status === 'confirmed' || b.status === 'pending').length;
           }
         }
@@ -83,11 +103,33 @@ export const Header = () => {
     const handleCustomUpdate = () => refreshCounts();
     window.addEventListener('ticketplus_update', handleCustomUpdate);
     window.addEventListener('storage', handleCustomUpdate);
+    window.addEventListener('focus', handleCustomUpdate);
+
+    // Supabase Realtime channel for live badge updates
+    const channel = supabase
+      .channel('header-counts-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          refreshCounts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        () => {
+          refreshCounts();
+        }
+      )
+      .subscribe();
 
     return () => {
       isMounted = false;
       window.removeEventListener('ticketplus_update', handleCustomUpdate);
       window.removeEventListener('storage', handleCustomUpdate);
+      window.removeEventListener('focus', handleCustomUpdate);
+      supabase.removeChannel(channel);
     };
   }, [user, pathname]);
 

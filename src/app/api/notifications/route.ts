@@ -29,27 +29,6 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Si aucune notification pour un utilisateur connecté, créer une notification de bienvenue
-    if (!notifications || notifications.length === 0) {
-      const welcomeNotif = {
-        user_id: user.id,
-        title: 'Bienvenue sur Ticket+ !',
-        message: 'Votre compte est prêt. Réservez vos trajets en bus partout au Bénin en toute sérénité.',
-        type: 'system' as const,
-        is_read: false,
-      };
-
-      const { data: created, error: insertError } = await supabase
-        .from('notifications')
-        .insert(welcomeNotif)
-        .select()
-        .single();
-
-      if (!insertError && created) {
-        return NextResponse.json({ notifications: [created] });
-      }
-    }
-
     return NextResponse.json({ notifications: notifications || [] });
   } catch (err) {
     console.error('API notifications GET error:', err);
