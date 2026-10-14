@@ -181,3 +181,41 @@ export async function GET() {
     );
   }
 }
+
+// DELETE /api/bookings — Supprimer un billet de l'historique
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const ref = searchParams.get('ref') || searchParams.get('reference');
+
+    if (!id && !ref) {
+      return NextResponse.json(
+        { error: 'ID ou référence de réservation requis.' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Si utilisateur connecté, supprimer ou archiver dans la BDD
+    if (user) {
+      let query = supabase.from('bookings').delete().eq('user_id', user.id);
+      if (id) {
+        query = query.eq('id', id);
+      } else if (ref) {
+        query = query.eq('booking_reference', ref);
+      }
+      await query;
+    }
+
+    return NextResponse.json({ success: true, message: 'Billet supprimé de l’historique.' });
+  } catch (err: any) {
+    console.error('API bookings DELETE error:', err);
+    return NextResponse.json(
+      { error: err.message || 'Erreur lors de la suppression.' },
+      { status: 500 }
+    );
+  }
+}

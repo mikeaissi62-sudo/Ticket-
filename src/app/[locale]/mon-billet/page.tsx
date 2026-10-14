@@ -44,6 +44,7 @@ export default function MonBilletPage() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [selectedQrTicket, setSelectedQrTicket] = useState<Ticket | null>(null);
   const [refundModalTicket, setRefundModalTicket] = useState<Ticket | null>(null);
+  const [confirmDeleteTicket, setConfirmDeleteTicket] = useState<Ticket | null>(null);
   const [isRefunding, setIsRefunding] = useState(false);
   const [refundReason, setRefundReason] = useState('Changement d’itinéraire');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
@@ -51,6 +52,75 @@ export default function MonBilletPage() {
   const showFeedback = (msg: string) => {
     setActionFeedback(msg);
     setTimeout(() => setActionFeedback(null), 5000);
+  };
+
+  const getDeletedRefs = useCallback((): Set<string> => {
+    try {
+      const raw = localStorage.getItem('ticketplus_deleted_booking_refs');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return new Set(arr);
+      }
+    } catch {}
+    return new Set();
+  }, []);
+
+  const addDeletedRef = useCallback((ref: string) => {
+    const current = getDeletedRefs();
+    current.add(ref);
+    try {
+      localStorage.setItem('ticketplus_deleted_booking_refs', JSON.stringify([...current]));
+    } catch {}
+  }, [getDeletedRefs]);
+
+  const handleDeleteTicket = async (ticket: Ticket) => {
+    try {
+      // 1. Enregistrer dans les références supprimées pour empêcher tout rechargement
+      addDeletedRef(ticket.ref);
+
+      // 2. Mettre à jour l'état local en mémoire
+      setTickets(prev => prev.filter(t => t.id !== ticket.id && t.ref !== ticket.ref));
+
+      // 3. Supprimer de ticketplus_guest_bookings dans localStorage
+      try {
+        const raw = localStorage.getItem('ticketplus_guest_bookings');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            const updated = list.filter((b: any) => b.ref !== ticket.ref && b.id !== ticket.id);
+            localStorage.setItem('ticketplus_guest_bookings', JSON.stringify(updated));
+          }
+        }
+      } catch (e) {
+        console.warn('Error removing from guest bookings:', e);
+      }
+
+      // 4. Supprimer les notifications associées à ce billet dans localStorage
+      try {
+        const notifsRaw = localStorage.getItem('ticketplus_notifications');
+        if (notifsRaw) {
+          const notifs = JSON.parse(notifsRaw);
+          if (Array.isArray(notifs)) {
+            const updatedNotifs = notifs.filter((n: any) => n.booking_ref !== ticket.ref && !n.title?.includes(ticket.ref));
+            localStorage.setItem('ticketplus_notifications', JSON.stringify(updatedNotifs));
+          }
+        }
+      } catch (e) {}
+
+      // 5. Appeler l'API de suppression côté serveur
+      fetch(`/api/bookings?ref=${encodeURIComponent(ticket.ref)}&id=${encodeURIComponent(ticket.id)}`, {
+        method: 'DELETE',
+      }).catch(() => {});
+
+      // 6. Notifier le Header et les Notifications
+      window.dispatchEvent(new Event('ticketplus_update'));
+
+      setConfirmDeleteTicket(null);
+      showFeedback(`Billet ${ticket.ref} supprimé de votre espace avec succès.`);
+    } catch (err) {
+      console.error('Error deleting ticket:', err);
+      showFeedback('Erreur lors de la suppression du billet.');
+    }
   };
 
   const handleProcessRefund = async () => {
@@ -304,9 +374,13 @@ export default function MonBilletPage() {
       console.error('Failed to fetch bookings:', err);
     }
     
-    setTickets(allTickets);
+    // Filtrer les billets explicitement supprimés par l'utilisateur
+    const deletedRefs = getDeletedRefs();
+    const finalTickets = allTickets.filter(t => !deletedRefs.has(t.ref) && !deletedRefs.has(t.id));
+
+    setTickets(finalTickets);
     setIsLoading(false);
-  }, []);
+  }, [getDeletedRefs]);
 
   useEffect(() => {
     fetchBookings().finally(() => setIsLoading(false));
@@ -465,10 +539,19 @@ export default function MonBilletPage() {
                           <div className="text-[12px] text-[#94A3B8]">{ticket.companyName} • Réf. <strong>{ticket.ref}</strong></div>
                         </div>
                       </div>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold border ${st.color}`}>
-                        <span className="material-symbols-outlined text-[14px]">{st.icon}</span>
-                        {st.label}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold border ${st.color}`}>
+                          <span className="material-symbols-outlined text-[14px]">{st.icon}</span>
+                          {st.label}
+                        </span>
+                        <button
+                          onClick={() => setConfirmDeleteTicket(ticket)}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-200"
+                          title="Supprimer ce billet de l’historique"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-[12px]">
@@ -535,13 +618,23 @@ export default function MonBilletPage() {
                           <span className="material-symbols-outlined text-[18px] text-rose-600">check_circle</span>
                           <span>Billet annulé avec succès • Remboursement de {Math.max(0, ticket.price - 300).toLocaleString('fr-FR')} FCFA validé.</span>
                         </div>
-                        <button 
-                          onClick={() => setSelectedQrTicket(ticket)}
-                          className="px-3 py-1.5 rounded-xl bg-white text-rose-700 text-[12px] font-semibold hover:bg-rose-50 transition-all flex items-center gap-1.5 border border-rose-200 self-start sm:self-auto shadow-xs"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">receipt_long</span>
-                          Voir reçu / billet
-                        </button>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <button 
+                            onClick={() => setSelectedQrTicket(ticket)}
+                            className="px-3.5 py-1.5 rounded-xl bg-white text-rose-700 text-[12px] font-semibold hover:bg-rose-50 transition-all flex items-center gap-1.5 border border-rose-200 shadow-xs"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">receipt_long</span>
+                            Voir reçu / billet
+                          </button>
+                          <button 
+                            onClick={() => setConfirmDeleteTicket(ticket)}
+                            className="px-3.5 py-1.5 rounded-xl bg-white text-rose-600 hover:bg-rose-100 text-[12px] font-bold transition-all flex items-center gap-1.5 border border-rose-200 shadow-xs"
+                            title="Supprimer ce billet de votre historique"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                            Supprimer
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -551,13 +644,23 @@ export default function MonBilletPage() {
                           <span className="material-symbols-outlined text-[18px] text-slate-500">done_all</span>
                           <span>Trajet effectué • Merci d&apos;avoir voyagé avec Ticket+ !</span>
                         </div>
-                        <button 
-                          onClick={() => setSelectedQrTicket(ticket)}
-                          className="px-3 py-1.5 rounded-xl bg-white text-slate-700 text-[12px] font-semibold hover:bg-slate-100 transition-all flex items-center gap-1.5 border border-slate-200 self-start sm:self-auto shadow-xs"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">visibility</span>
-                          Consulter l&apos;archive
-                        </button>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <button 
+                            onClick={() => setSelectedQrTicket(ticket)}
+                            className="px-3 py-1.5 rounded-xl bg-white text-slate-700 text-[12px] font-semibold hover:bg-slate-100 transition-all flex items-center gap-1.5 border border-slate-200 shadow-xs"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">visibility</span>
+                            Consulter l&apos;archive
+                          </button>
+                          <button 
+                            onClick={() => setConfirmDeleteTicket(ticket)}
+                            className="px-3 py-1.5 rounded-xl bg-white text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-[12px] font-semibold transition-all flex items-center gap-1 border border-slate-200 shadow-xs"
+                            title="Supprimer ce billet de l'historique"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">delete</span>
+                            Supprimer
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -747,6 +850,44 @@ export default function MonBilletPage() {
                     <span>Confirmer le remboursement</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmation de Suppression de Billet */}
+      {confirmDeleteTicket && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setConfirmDeleteTicket(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-slate-100"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3.5 border border-rose-100">
+              <span className="material-symbols-outlined text-[24px]">delete_forever</span>
+            </div>
+            <h3 className="text-[18px] font-black text-[#0F172A] mb-1">
+              Supprimer ce billet ?
+            </h3>
+            <p className="text-[13px] text-slate-500 mb-4 leading-relaxed">
+              Le billet <strong>{confirmDeleteTicket.ref}</strong> ({confirmDeleteTicket.from} → {confirmDeleteTicket.to}) sera définitivement supprimé de votre espace et ne sera plus affiché.
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => setConfirmDeleteTicket(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[13px] transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleDeleteTicket(confirmDeleteTicket)}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[13px] transition-all shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <span>Supprimer</span>
               </button>
             </div>
           </div>
