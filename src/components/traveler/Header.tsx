@@ -36,37 +36,45 @@ export const Header = () => {
         console.warn('Storage read warning in header:', e);
       }
 
-      // 2. Si connecté, synchroniser avec l'API
-      if (user) {
-        try {
-          const [notifsRes, bookingsRes] = await Promise.all([
-            fetch('/api/notifications'),
-            fetch('/api/bookings')
-          ]);
-
-          if (notifsRes.ok) {
-            const data = await notifsRes.json();
-            if (isMounted && data.notifications) {
-              const apiUnread = data.notifications.filter((n: any) => !n.is_read).length;
-              localUnread = Math.max(localUnread, apiUnread);
-            }
-          }
-
-          if (bookingsRes.ok) {
-            const bData = await bookingsRes.json();
-            if (isMounted && bData.bookings) {
-              const apiActive = bData.bookings.filter((b: any) => b.status === 'confirmed' || b.status === 'pending').length;
-              localActiveTickets = Math.max(localActiveTickets, apiActive);
-            }
-          }
-        } catch (err) {
-          console.warn('Failed to load counts in header:', err);
+      // Si non connecté, aucun badge de compte personnel
+      if (!user) {
+        if (isMounted) {
+          setUnreadNotifs(0);
+          setActiveTicketsCount(0);
         }
+        return;
       }
 
-      if (isMounted) {
-        setUnreadNotifs(localUnread);
-        setActiveTicketsCount(localActiveTickets);
+      // Si connecté, synchroniser avec les réservations et notifications de l'utilisateur
+      try {
+        const [notifsRes, bookingsRes] = await Promise.all([
+          fetch('/api/notifications'),
+          fetch('/api/bookings')
+        ]);
+
+        let unread = 0;
+        let active = 0;
+
+        if (notifsRes.ok) {
+          const data = await notifsRes.json();
+          if (isMounted && data.notifications) {
+            unread = data.notifications.filter((n: any) => !n.is_read).length;
+          }
+        }
+
+        if (bookingsRes.ok) {
+          const bData = await bookingsRes.json();
+          if (isMounted && bData.bookings) {
+            active = bData.bookings.filter((b: any) => b.status === 'confirmed' || b.status === 'pending').length;
+          }
+        }
+
+        if (isMounted) {
+          setUnreadNotifs(unread);
+          setActiveTicketsCount(active);
+        }
+      } catch (err) {
+        console.warn('Failed to load counts in header:', err);
       }
     };
 

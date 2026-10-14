@@ -228,7 +228,25 @@ export default function MonBilletPage() {
     setIsLoading(true);
     let allTickets: Ticket[] = [];
 
-    // 1. Charger d'abord les réservations stockées localement sur l'appareil
+    // Vérifier d'abord la session Supabase
+    let currentUser: any = null;
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUser = user;
+      setIsLoggedIn(!!user);
+    } catch {
+      setIsLoggedIn(false);
+    }
+
+    // Si non connecté, ne pas ouvrir la liste des billets personnels
+    if (!currentUser) {
+      setTickets([]);
+      setIsLoading(false);
+      return;
+    }
+
+    // 1. Charger les réservations stockées localement sur l'appareil pour cet utilisateur
     try {
       const stored = localStorage.getItem('ticketplus_guest_bookings');
       if (stored) {
@@ -258,10 +276,7 @@ export default function MonBilletPage() {
     // 2. Charger les réservations API de l'utilisateur connecté
     try {
       const res = await fetch('/api/bookings');
-      if (res.status === 401) {
-        setIsLoggedIn(false);
-      } else if (res.ok) {
-        setIsLoggedIn(true);
+      if (res.ok) {
         const data = await res.json();
         if (data.bookings && data.bookings.length > 0) {
           const apiMapped: Ticket[] = data.bookings.map((b: any) => ({
@@ -287,15 +302,6 @@ export default function MonBilletPage() {
       }
     } catch (err) {
       console.error('Failed to fetch bookings:', err);
-    }
-    
-    // Check if user is logged in
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsLoggedIn(!!user);
-    } catch {
-      setIsLoggedIn(false);
     }
     
     setTickets(allTickets);
@@ -400,15 +406,24 @@ export default function MonBilletPage() {
               <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Chargement de vos billets...</h3>
               <p className="text-[13px] text-[#64748B]">Veuillez patienter un instant.</p>
             </div>
-          ) : isLoggedIn === false && tickets.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
-              <span className="material-symbols-outlined text-[48px] text-[#F59E0B] block mb-3">login</span>
-              <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Connectez-vous pour voir vos billets</h3>
-              <p className="text-[13px] text-[#64748B] mb-4">Créez un compte ou connectez-vous pour accéder à votre historique de réservations.</p>
-              <Link href={`/${locale}/profil`} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F172A] text-white text-[13px] font-semibold hover:bg-[#1E293B] transition-all">
-                <span className="material-symbols-outlined text-[18px]">person</span>
-                Se connecter / S&apos;inscrire
-              </Link>
+          ) : isLoggedIn === false ? (
+            <div className="bg-white rounded-3xl border border-[#E2E8F0] shadow-sm p-8 sm:p-12 text-center max-w-md mx-auto my-6">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-200/80">
+                <span className="material-symbols-outlined text-[32px]">lock</span>
+              </div>
+              <h3 className="text-[20px] font-extrabold text-[#0F172A] mb-2 tracking-tight">Espace réservé aux voyageurs</h3>
+              <p className="text-[14px] text-[#64748B] mb-6 leading-relaxed">
+                Connectez-vous à votre compte Ticket+ pour consulter vos billets, télécharger vos cartes d&apos;embarquement avec QR Code et gérer vos annulations.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href={`/${locale}/login`} className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#0F172A] text-white text-[13px] font-bold hover:bg-[#1E293B] transition-all shadow-sm">
+                  <span className="material-symbols-outlined text-[18px]">login</span>
+                  Se connecter
+                </Link>
+                <Link href={`/${locale}/register`} className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-700 text-[13px] font-bold hover:bg-slate-200 transition-all">
+                  Créer un compte
+                </Link>
+              </div>
             </div>
           ) : filtered.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">

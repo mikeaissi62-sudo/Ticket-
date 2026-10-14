@@ -488,7 +488,7 @@ export default function NotificationsCenterPage() {
               </span>
               <p className="text-[14px] text-[#64748B]">Chargement de vos notifications...</p>
             </div>
-          ) : isLoggedIn === false && notifications.length === 0 ? (
+          ) : isLoggedIn === false ? (
             <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center shadow-sm">
               <span className="material-symbols-outlined text-[48px] text-[#CBD5E1] mb-2 block">
                 lock
