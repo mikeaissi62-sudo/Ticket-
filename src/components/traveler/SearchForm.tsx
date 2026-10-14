@@ -18,6 +18,22 @@ const CITIES = [
 const WEEKDAYS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
+const getCitySafe = (name: unknown, defaultIndex: number) => {
+  if (typeof name === 'string' && name.trim()) {
+    const found = CITIES.find(c => c.name.toLowerCase() === name.trim().toLowerCase());
+    if (found) return found;
+  }
+  return CITIES[defaultIndex] || CITIES[0];
+};
+
+const getDateSafe = (d: unknown) => {
+  if (typeof d === 'string' && d.trim()) {
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date();
+};
+
 export const SearchForm = () => {
   const router = useRouter();
   const locale = useLocale();
@@ -27,10 +43,19 @@ export const SearchForm = () => {
   const [tripType, setTripType] = useState<'oneway' | 'roundtrip'>('oneway');
   const [activeDropdown, setActiveDropdown] = useState<'from' | 'to' | 'date' | 'passengers' | null>(null);
   
-  const [fromCity, setFromCity] = useState(CITIES.find(c => c.name.toLowerCase() === from.toLowerCase()) || CITIES[0]);
-  const [toCity, setToCity] = useState(CITIES.find(c => c.name.toLowerCase() === to.toLowerCase()) || CITIES[1]);
-  const [selectedDate, setSelectedDate] = useState<Date>(date ? new Date(date) : new Date());
-  const [passengers, setPassengers] = useState(storePassengers || 1);
+  const [fromCity, setFromCity] = useState(() => getCitySafe(from, 0));
+  const [toCity, setToCity] = useState(() => getCitySafe(to, 1));
+  const [selectedDate, setSelectedDate] = useState<Date>(() => getDateSafe(date));
+  const [passengers, setPassengers] = useState(typeof storePassengers === 'number' && storePassengers > 0 ? storePassengers : 1);
+
+  // Sync state when store rehydrates
+  useEffect(() => {
+    if (from) setFromCity(getCitySafe(from, 0));
+  }, [from]);
+
+  useEffect(() => {
+    if (to) setToCity(getCitySafe(to, 1));
+  }, [to]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -52,25 +77,42 @@ export const SearchForm = () => {
   const [isSearching, setIsSearching] = useState(false);
 
   const prefetchResults = () => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    router.prefetch(`/${locale}/resultats?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
+    try {
+      const validDate = (!selectedDate || isNaN(selectedDate.getTime())) ? new Date() : selectedDate;
+      const dateStr = validDate.toISOString().split('T')[0];
+      const fromName = fromCity?.name || 'Cotonou';
+      const toName = toCity?.name || 'Parakou';
+      router.prefetch(`/${locale}/resultats?from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}&date=${dateStr}&passengers=${passengers || 1}`);
+    } catch (e) {
+      console.warn('Prefetch error:', e);
+    }
   };
 
   const handleSearch = () => {
     setIsSearching(true);
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    setSearch(fromCity.name, toCity.name, dateStr, passengers);
-    router.push(`/${locale}/resultats?from=${encodeURIComponent(fromCity.name)}&to=${encodeURIComponent(toCity.name)}&date=${dateStr}&passengers=${passengers}`);
+    try {
+      const validDate = (!selectedDate || isNaN(selectedDate.getTime())) ? new Date() : selectedDate;
+      const dateStr = validDate.toISOString().split('T')[0];
+      const fromName = fromCity?.name || 'Cotonou';
+      const toName = toCity?.name || 'Parakou';
+      setSearch(fromName, toName, dateStr, passengers || 1);
+      router.push(`/${locale}/resultats?from=${encodeURIComponent(fromName)}&to=${encodeURIComponent(toName)}&date=${dateStr}&passengers=${passengers || 1}`);
+    } catch (e) {
+      console.error('Search navigation error:', e);
+      setIsSearching(false);
+    }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+  const formatDate = (d: Date) => {
+    if (!d || isNaN(d.getTime())) return "Aujourd'hui";
+    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
   // Calendar Logic
   const getCalendarDays = () => {
-    const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth();
+    const validDate = (!selectedDate || isNaN(selectedDate.getTime())) ? new Date() : selectedDate;
+    const year = validDate.getFullYear();
+    const month = validDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sunday
     const padding = firstDayIndex === 0 ? 6 : firstDayIndex - 1; // Adjust for Monday start

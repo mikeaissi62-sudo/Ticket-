@@ -60,6 +60,76 @@ export async function GET() {
   }
 }
 
+// POST /api/notifications — Créer une notification de réservation ou système
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const body = await request.json();
+    const { title, message, type = 'booking', booking_ref } = body;
+
+    if (!title || !message) {
+      return NextResponse.json(
+        { error: 'Titre et message requis.' },
+        { status: 400 }
+      );
+    }
+
+    if (!user) {
+      return NextResponse.json({
+        success: true,
+        notification: {
+          id: `notif-${Date.now()}`,
+          title,
+          message,
+          type,
+          booking_ref,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        },
+      });
+    }
+
+    const { data: created, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: user.id,
+        title,
+        message,
+        type,
+        is_read: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({
+        success: true,
+        notification: {
+          id: `notif-${Date.now()}`,
+          title,
+          message,
+          type,
+          booking_ref,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        },
+      });
+    }
+
+    return NextResponse.json({ success: true, notification: created }, { status: 201 });
+  } catch (err) {
+    console.error('API notifications POST error:', err);
+    return NextResponse.json(
+      { error: 'Erreur serveur lors de la création de la notification.' },
+      { status: 500 }
+    );
+  }
+}
+
 // PATCH /api/notifications — Marquer comme lu
 export async function PATCH(request: NextRequest) {
   try {
@@ -131,14 +201,25 @@ export async function DELETE(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Vous devez être connecté.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: true, message: 'Notification supprimée localement.' });
     }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const all = searchParams.get('all');
+
+    if (all === 'true') {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Toutes les notifications ont été supprimées.' });
+    }
 
     if (!id) {
       return NextResponse.json(

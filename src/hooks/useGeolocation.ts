@@ -80,9 +80,10 @@ export function useGeolocation(): UseGeolocationReturn {
 
   // Auto-request on mount
   useEffect(() => {
+    if (typeof window === 'undefined' || !navigator) return;
     // Check if permission was previously granted
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((result) => {
         if (result.state === 'granted') {
           requestPermission();
         }

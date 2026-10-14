@@ -14,9 +14,13 @@ interface SearchSummaryBarProps {
 export const SearchSummaryBar = ({ from = 'Cotonou', to = 'Parakou', date, passengers = 1, tripCount = 0 }: SearchSummaryBarProps) => {
   const locale = useLocale();
 
-  const formattedDate = date
-    ? new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
-    : 'Date non définie';
+  let formattedDate = 'Date non définie';
+  if (date) {
+    const d = new Date(date);
+    if (!isNaN(d.getTime())) {
+      formattedDate = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+  }
 
   return (
     <div className="bg-white border-b border-[#E2E8F0] shadow-sm">

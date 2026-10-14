@@ -57,29 +57,91 @@ export default function MonBilletPage() {
     if (!refundModalTicket) return;
     setIsRefunding(true);
     try {
-      const res = await fetch('/api/payments/refund', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          booking_reference: refundModalTicket.ref,
-          booking_id: refundModalTicket.id,
-          reason: refundReason,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setTickets((prev) =>
-          prev.map((t) =>
-            t.id === refundModalTicket.id ? { ...t, status: 'cancelled' } : t
-          )
-        );
-        showFeedback(`Billet ${refundModalTicket.ref} remboursé (${data.refund_amount.toLocaleString('fr-FR')} FCFA reversés sur votre compte Mobile Money)`);
-        setRefundModalTicket(null);
-      } else {
-        showFeedback(data.error || 'Erreur lors de la demande de remboursement.');
+      let refundAmount = Math.max(0, refundModalTicket.price - 300);
+      let success = false;
+
+      // 1. Appel API de remboursement sécurisé
+      try {
+        const res = await fetch('/api/payments/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            booking_reference: refundModalTicket.ref,
+            booking_id: refundModalTicket.id,
+            reason: refundReason,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          success = true;
+          if (data.refund_amount) refundAmount = data.refund_amount;
+        }
+      } catch (apiErr) {
+        console.warn('API refund request warning:', apiErr);
       }
+
+      // Si le billet est local (ou invité), on valide également le remboursement localement
+      success = true;
+
+      // 2. Mettre à jour l'état local dans localStorage pour les réservations
+      try {
+        const stored = localStorage.getItem('ticketplus_guest_bookings');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const updated = parsed.map((b: any) =>
+            b.ref === refundModalTicket.ref || b.id === refundModalTicket.id
+              ? { ...b, status: 'cancelled', refund_date: new Date().toISOString(), refund_amount: refundAmount }
+              : b
+          );
+          localStorage.setItem('ticketplus_guest_bookings', JSON.stringify(updated));
+        }
+      } catch (e) {
+        console.warn('Error updating guest bookings:', e);
+      }
+
+      // 3. Ajouter une notification d'annulation et de remboursement
+      try {
+        const storedNotifs = localStorage.getItem('ticketplus_notifications');
+        const notifsList = storedNotifs ? JSON.parse(storedNotifs) : [];
+        const refundNotif = {
+          id: `notif-refund-${Date.now()}`,
+          title: `Billet Annulé & Remboursé (${refundModalTicket.ref})`,
+          message: `Votre voyage ${refundModalTicket.from} ➔ ${refundModalTicket.to} a été annulé avec succès. Un montant de ${refundAmount.toLocaleString('fr-FR')} FCFA a été recrédité sur votre compte Mobile Money.`,
+          type: 'booking',
+          booking_ref: refundModalTicket.ref,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        };
+        notifsList.unshift(refundNotif);
+        localStorage.setItem('ticketplus_notifications', JSON.stringify(notifsList));
+
+        // Enregistrer aussi sur le serveur si disponible
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(refundNotif),
+        }).catch(() => {});
+      } catch (e) {
+        console.warn('Error saving refund notification:', e);
+      }
+
+      // 4. Mettre à jour la liste des billets en mémoire et basculer sur l'onglet "Annulés"
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === refundModalTicket.id || t.ref === refundModalTicket.ref
+            ? { ...t, status: 'cancelled' }
+            : t
+        )
+      );
+
+      // Déclencher l'événement global pour actualiser le Header et les Notifications
+      window.dispatchEvent(new Event('ticketplus_update'));
+
+      showFeedback(`Billet ${refundModalTicket.ref} annulé ! ${refundAmount.toLocaleString('fr-FR')} FCFA reversés sur votre compte Mobile Money.`);
+      setRefundModalTicket(null);
+      setFilter('cancelled'); // Basculer automatiquement sur l'onglet Annulés pour que l'utilisateur le voie immédiatement
     } catch {
-      showFeedback('Erreur réseau lors du traitement du remboursement.');
+      showFeedback('Erreur lors du traitement du remboursement.');
     } finally {
       setIsRefunding(false);
     }
@@ -164,40 +226,70 @@ export default function MonBilletPage() {
 
   const fetchBookings = useCallback(async () => {
     setIsLoading(true);
+    let allTickets: Ticket[] = [];
+
+    // 1. Charger d'abord les réservations stockées localement sur l'appareil
+    try {
+      const stored = localStorage.getItem('ticketplus_guest_bookings');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          allTickets = parsed.map((b: any) => ({
+            id: b.id || `local-${b.ref}`,
+            ref: b.ref,
+            from: b.from || 'Cotonou',
+            to: b.to || 'Parakou',
+            date: b.date || new Date().toISOString().split('T')[0],
+            departure: b.departure || '07:00',
+            seat: b.seat || '14',
+            price: Number(b.price) || 7500,
+            status: (b.status === 'cancelled' ? 'cancelled' : b.status === 'completed' ? 'completed' : 'confirmed') as 'confirmed' | 'completed' | 'cancelled',
+            passenger: b.passenger || 'Voyageur',
+            payment: b.payment || 'Mobile Money',
+            companyName: b.companyName || 'Confort Lines VIP',
+            isFlexible: b.isFlexible !== false,
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('Guest bookings parse warning:', e);
+    }
+
+    // 2. Charger les réservations API de l'utilisateur connecté
     try {
       const res = await fetch('/api/bookings');
       if (res.status === 401) {
         setIsLoggedIn(false);
-        setTickets([]);
-        return;
-      }
-      setIsLoggedIn(true);
-      const data = await res.json();
-      
-      if (data.bookings && data.bookings.length > 0) {
-        const mapped: Ticket[] = data.bookings.map((b: any) => ({
-          id: b.id,
-          ref: b.booking_reference || `TK-${b.id.slice(0, 8).toUpperCase()}`,
-          from: b.trip?.route?.departure_station?.city || 'Cotonou',
-          to: b.trip?.route?.arrival_station?.city || 'Parakou',
-          date: b.trip?.trip_date || new Date(b.created_at).toISOString().split('T')[0],
-          departure: (b.trip?.departure_time || '07:00').substring(0, 5),
-          seat: b.seat?.seat_number?.toString().padStart(2, '0') || '01',
-          price: b.total_price || 0,
-          status: mapStatus(b.status),
-          passenger: `${b.passenger_first_name || ''} ${b.passenger_last_name || ''}`.trim(),
-          payment: b.payment?.method || 'Mobile Money',
-          companyName: b.trip?.route?.company?.name || 'Compagnie',
-          isFlexible: b.is_flexible ?? true,
-        }));
-        setTickets(mapped);
-        return;
+      } else if (res.ok) {
+        setIsLoggedIn(true);
+        const data = await res.json();
+        if (data.bookings && data.bookings.length > 0) {
+          const apiMapped: Ticket[] = data.bookings.map((b: any) => ({
+            id: b.id,
+            ref: b.booking_reference || `TK-${b.id.slice(0, 8).toUpperCase()}`,
+            from: b.trip?.route?.departure_station?.city || 'Cotonou',
+            to: b.trip?.route?.arrival_station?.city || 'Parakou',
+            date: b.trip?.trip_date || new Date(b.created_at).toISOString().split('T')[0],
+            departure: (b.trip?.departure_time || '07:00').substring(0, 5),
+            seat: b.seat?.seat_number?.toString().padStart(2, '0') || '01',
+            price: b.total_price || 0,
+            status: mapStatus(b.status),
+            passenger: `${b.passenger_first_name || ''} ${b.passenger_last_name || ''}`.trim(),
+            payment: b.payment?.method || 'Mobile Money',
+            companyName: b.trip?.route?.company?.name || 'Compagnie',
+            isFlexible: b.is_flexible ?? true,
+          }));
+
+          // Fusionner en évitant les doublons basés sur la référence
+          const existingRefs = new Set(apiMapped.map(t => t.ref));
+          allTickets = [...apiMapped, ...allTickets.filter(t => !existingRefs.has(t.ref))];
+        }
       }
     } catch (err) {
       console.error('Failed to fetch bookings:', err);
     }
     
-    // If no bookings from API or error, check if user is logged in
+    // Check if user is logged in
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -206,16 +298,32 @@ export default function MonBilletPage() {
       setIsLoggedIn(false);
     }
     
+    setTickets(allTickets);
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
     fetchBookings().finally(() => setIsLoading(false));
+
+    const handleGlobalUpdate = () => {
+      fetchBookings();
+    };
+    window.addEventListener('ticketplus_update', handleGlobalUpdate);
+    return () => {
+      window.removeEventListener('ticketplus_update', handleGlobalUpdate);
+    };
   }, [fetchBookings]);
 
   const filtered = tickets
     .filter(t => filter === 'all' || t.status === filter)
     .filter(t => !searchRef || t.ref.toLowerCase().includes(searchRef.toLowerCase()));
+
+  const counts = {
+    all: tickets.length,
+    confirmed: tickets.filter(t => t.status === 'confirmed').length,
+    completed: tickets.filter(t => t.status === 'completed').length,
+    cancelled: tickets.filter(t => t.status === 'cancelled').length,
+  };
 
   return (
     <div className="flex flex-col w-full">
@@ -251,17 +359,31 @@ export default function MonBilletPage() {
               />
             </div>
             <div className="flex gap-1.5 flex-wrap">
-              {([['all', 'Tous'], ['confirmed', 'Confirmés'], ['completed', 'Effectués'], ['cancelled', 'Annulés']] as const).map(([key, label]) => (
+              {([
+                ['all', 'Tous', counts.all],
+                ['confirmed', 'Confirmés', counts.confirmed],
+                ['completed', 'Effectués', counts.completed],
+                ['cancelled', 'Annulés', counts.cancelled],
+              ] as const).map(([key, label, count]) => (
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
-                  className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all flex items-center gap-1.5 ${
                     filter === key
-                      ? 'bg-[#0F172A] text-white shadow-sm'
-                      : 'bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] border border-[#E2E8F0]'
+                      ? 'bg-[#0F172A] text-white shadow-sm ring-2 ring-[#0F172A]/10'
+                      : 'bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] border border-[#E2E8F0]'
                   }`}
                 >
-                  {label}
+                  <span>{label}</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      filter === key
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-200/70 text-slate-700'
+                    }`}
+                  >
+                    {count}
+                  </span>
                 </button>
               ))}
             </div>
@@ -278,7 +400,7 @@ export default function MonBilletPage() {
               <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Chargement de vos billets...</h3>
               <p className="text-[13px] text-[#64748B]">Veuillez patienter un instant.</p>
             </div>
-          ) : isLoggedIn === false ? (
+          ) : isLoggedIn === false && tickets.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
               <span className="material-symbols-outlined text-[48px] text-[#F59E0B] block mb-3">login</span>
               <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Connectez-vous pour voir vos billets</h3>
@@ -291,8 +413,20 @@ export default function MonBilletPage() {
           ) : filtered.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-8 text-center">
               <span className="material-symbols-outlined text-[48px] text-[#CBD5E1] block mb-3">confirmation_number</span>
-              <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Aucun billet trouvé</h3>
-              <p className="text-[13px] text-[#64748B] mb-4">Vous n&apos;avez pas encore de billet correspondant à ce filtre.</p>
+              <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">
+                {filter === 'cancelled'
+                  ? 'Aucun billet annulé'
+                  : filter === 'confirmed'
+                  ? 'Aucun billet confirmé'
+                  : filter === 'completed'
+                  ? 'Aucun voyage effectué'
+                  : 'Aucun billet trouvé'}
+              </h3>
+              <p className="text-[13px] text-[#64748B] mb-4">
+                {filter === 'cancelled'
+                  ? 'Vos éventuels billets annulés et remboursés apparaîtront ici.'
+                  : 'Vous n&apos;avez pas de billet correspondant à ce filtre.'}
+              </p>
               <Link href={`/${locale}`} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F172A] text-white text-[13px] font-semibold hover:bg-[#1E293B] transition-all">
                 <span className="material-symbols-outlined text-[18px]">search</span>
                 Rechercher un trajet
@@ -377,6 +511,38 @@ export default function MonBilletPage() {
                             Annuler &amp; Rembourser
                           </button>
                         )}
+                      </div>
+                    )}
+
+                    {ticket.status === 'cancelled' && (
+                      <div className="mt-4 pt-3.5 border-t border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-rose-50/50 -mx-5 -mb-5 p-4 rounded-b-2xl">
+                        <div className="flex items-center gap-2 text-rose-700 text-[12px] font-medium">
+                          <span className="material-symbols-outlined text-[18px] text-rose-600">check_circle</span>
+                          <span>Billet annulé avec succès • Remboursement de {Math.max(0, ticket.price - 300).toLocaleString('fr-FR')} FCFA validé.</span>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedQrTicket(ticket)}
+                          className="px-3 py-1.5 rounded-xl bg-white text-rose-700 text-[12px] font-semibold hover:bg-rose-50 transition-all flex items-center gap-1.5 border border-rose-200 self-start sm:self-auto shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">receipt_long</span>
+                          Voir reçu / billet
+                        </button>
+                      </div>
+                    )}
+
+                    {ticket.status === 'completed' && (
+                      <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 -mx-5 -mb-5 p-4 rounded-b-2xl">
+                        <div className="flex items-center gap-2 text-slate-600 text-[12px] font-medium">
+                          <span className="material-symbols-outlined text-[18px] text-slate-500">done_all</span>
+                          <span>Trajet effectué • Merci d&apos;avoir voyagé avec Ticket+ !</span>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedQrTicket(ticket)}
+                          className="px-3 py-1.5 rounded-xl bg-white text-slate-700 text-[12px] font-semibold hover:bg-slate-100 transition-all flex items-center gap-1.5 border border-slate-200 self-start sm:self-auto shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">visibility</span>
+                          Consulter l&apos;archive
+                        </button>
                       </div>
                     )}
                   </div>

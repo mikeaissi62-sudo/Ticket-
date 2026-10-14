@@ -24,8 +24,8 @@ export interface BookingData {
   isFlexible?: boolean;
 }
 
-const getStationName = (city: string, company: string = '') => {
-  const isConfort = company.toLowerCase().includes('confort');
+const getStationName = (city: string = 'Cotonou', company: string = '') => {
+  const isConfort = (company || '').toLowerCase().includes('confort');
   const stations: Record<string, string> = {
     'Cotonou': isConfort ? 'Gare Jonquet' : 'Gare Étoile Rouge',
     'Parakou': 'Gare Centrale',
@@ -40,7 +40,7 @@ const getStationName = (city: string, company: string = '') => {
 };
 
 const getPaymentDisplay = (method: string = '') => {
-  const lower = method.toLowerCase();
+  const lower = (method || '').toLowerCase();
   if (lower.includes('mtn') || lower === 'mtn_momo') return 'MTN MoMo (Payé)';
   if (lower.includes('moov') || lower === 'moov_money') return 'Moov Money (Payé)';
   if (lower.includes('card') || lower.includes('carte') || lower.includes('visa')) return 'Carte Bancaire (Payé)';

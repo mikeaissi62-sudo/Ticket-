@@ -37,9 +37,12 @@ export default function ResultsPage() {
     { from: 'Cotonou', to: 'Porto-Novo', distance: '30 km', duration: '0h 45m', price: 1500 },
   ];
 
+  const safeFrom = (typeof from === 'string' && from.trim()) ? from.trim().toLowerCase() : 'cotonou';
+  const safeTo = (typeof to === 'string' && to.trim()) ? to.trim().toLowerCase() : 'parakou';
+
   const currentRoute = ROUTES.find(r => 
-    (r.from.toLowerCase() === from.toLowerCase() && r.to.toLowerCase() === to.toLowerCase()) || 
-    (r.to.toLowerCase() === from.toLowerCase() && r.from.toLowerCase() === to.toLowerCase())
+    (r.from.toLowerCase() === safeFrom && r.to.toLowerCase() === safeTo) || 
+    (r.to.toLowerCase() === safeFrom && r.from.toLowerCase() === safeTo)
   ) || { price: 6500, duration: '6h 30m', distance: '420 km' };
 
   const basePrice = currentRoute.price;
@@ -111,9 +114,9 @@ export default function ResultsPage() {
   if (filterDirect) trips = trips.filter(t => t.duration?.startsWith('2h') || t.duration?.startsWith('3h') || t.duration?.startsWith('5h'));
 
   trips.sort((a, b) => {
-    if (sortBy === 'timeAsc') return a.departureTime.localeCompare(b.departureTime);
-    if (sortBy === 'priceAsc') return a.price - b.price;
-    if (sortBy === 'seatsDesc') return b.availableSeats - a.availableSeats;
+    if (sortBy === 'timeAsc') return String(a.departureTime || '').localeCompare(String(b.departureTime || ''));
+    if (sortBy === 'priceAsc') return (Number(a.price) || 0) - (Number(b.price) || 0);
+    if (sortBy === 'seatsDesc') return (Number(b.availableSeats) || 0) - (Number(a.availableSeats) || 0);
     return 0;
   });
 

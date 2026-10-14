@@ -29,28 +29,33 @@ function PopularRoutesSection() {
         const res = await fetch('/api/routes');
         if (!res.ok) return;
         const data = await res.json();
-        if (!data.routes || data.routes.length === 0) return;
+        if (!data.routes || !Array.isArray(data.routes) || data.routes.length === 0) return;
 
         // Group routes by city pair and find min price + total departures
         const grouped: Record<string, { from: string; to: string; minPrice: number; departures: number; duration: string; companies: Set<string>; features: Set<string> }> = {};
         
         for (const r of data.routes) {
+          if (!r || !r.from || !r.to) continue;
           const key = `${r.from}-${r.to}`;
+          const price = typeof r.price === 'number' ? r.price : (Number(r.price) || 5000);
+          const departures = typeof r.departures === 'number' ? r.departures : 1;
+          const featuresList = Array.isArray(r.features) ? r.features : [];
+
           if (!grouped[key]) {
             grouped[key] = {
               from: r.from,
               to: r.to,
-              minPrice: r.price,
-              departures: r.departures,
-              duration: r.duration,
-              companies: new Set([r.company]),
-              features: new Set(r.features || []),
+              minPrice: price,
+              departures: departures,
+              duration: r.duration || '6h30',
+              companies: new Set(r.company ? [r.company] : []),
+              features: new Set(featuresList),
             };
           } else {
-            grouped[key].minPrice = Math.min(grouped[key].minPrice, r.price);
-            grouped[key].departures += r.departures;
-            grouped[key].companies.add(r.company);
-            (r.features || []).forEach((f: string) => grouped[key].features.add(f));
+            grouped[key].minPrice = Math.min(grouped[key].minPrice, price);
+            grouped[key].departures += departures;
+            if (r.company) grouped[key].companies.add(r.company);
+            featuresList.forEach((f: string) => grouped[key].features.add(f));
           }
         }
 
@@ -61,9 +66,9 @@ function PopularRoutesSection() {
           .map(r => ({
             from: r.from,
             to: r.to,
-            minPrice: r.minPrice,
-            departures: r.departures,
-            duration: r.duration,
+            minPrice: r.minPrice || 5000,
+            departures: r.departures || 1,
+            duration: r.duration || '6h30',
             details: `${r.companies.size} compagnie${r.companies.size > 1 ? 's' : ''} • Bus ${Array.from(r.features).slice(0, 2).join(' & ') || 'Climatisé'}`,
           }));
         
@@ -84,10 +89,10 @@ function PopularRoutesSection() {
           key={`${r.from}-${r.to}`}
           from={r.from}
           to={r.to}
-          price={`dès ${r.minPrice.toLocaleString('fr-FR')}`}
-          details={r.details}
-          duration={r.duration}
-          tag={`${r.departures} départs/jour`}
+          price={`dès ${(r.minPrice || 0).toLocaleString('fr-FR')}`}
+          details={r.details || 'Bus Climatisé'}
+          duration={r.duration || '--'}
+          tag={`${r.departures || 1} départs/jour`}
         />
       ))}
     </div>

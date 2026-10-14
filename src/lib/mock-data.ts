@@ -57,9 +57,12 @@ export const COMPANIES: Company[] = [
 ];
 
 // Helper to generate dynamic mock trips based on search parameters
-export const generateMockTrips = (fromCity: string, toCity: string, date: string): Trip[] => {
-  const depStation = STATIONS.find(s => s.city.toLowerCase() === fromCity.toLowerCase()) || STATIONS[0];
-  const arrStation = STATIONS.find(s => s.city.toLowerCase() === toCity.toLowerCase()) || STATIONS[1];
+export const generateMockTrips = (fromCity: string = 'Cotonou', toCity: string = 'Parakou', date: string = ''): Trip[] => {
+  const safeFrom = (typeof fromCity === 'string' && fromCity.trim()) ? fromCity.trim().toLowerCase() : 'cotonou';
+  const safeTo = (typeof toCity === 'string' && toCity.trim()) ? toCity.trim().toLowerCase() : 'parakou';
+
+  const depStation = STATIONS.find(s => s.city.toLowerCase() === safeFrom) || STATIONS[0];
+  const arrStation = STATIONS.find(s => s.city.toLowerCase() === safeTo) || STATIONS[1];
 
   const basePrice = 5000 + Math.floor(Math.random() * 5000); // Random base price between 5000 and 10000
 

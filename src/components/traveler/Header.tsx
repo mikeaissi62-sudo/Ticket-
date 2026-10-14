@@ -12,29 +12,75 @@ export const Header = () => {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const [unreadNotifs, setUnreadNotifs] = useState<number>(0);
+  const [activeTicketsCount, setActiveTicketsCount] = useState<number>(0);
 
   useEffect(() => {
-    if (!user) {
-      setUnreadNotifs(0);
-      return;
-    }
     let isMounted = true;
-    async function fetchNotifs() {
+
+    const refreshCounts = async () => {
+      // 1. Billets locaux et notifications locales
+      let localUnread = 0;
+      let localActiveTickets = 0;
       try {
-        const res = await fetch('/api/notifications');
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && data.notifications) {
-            const unread = data.notifications.filter((n: any) => !n.is_read).length;
-            setUnreadNotifs(unread);
-          }
+        const rawNotifs = localStorage.getItem('ticketplus_notifications');
+        if (rawNotifs) {
+          const parsed = JSON.parse(rawNotifs);
+          localUnread = parsed.filter((n: any) => !n.is_read).length;
         }
-      } catch (err) {
-        console.warn('Failed to load notifications count in header:', err);
+        const rawBookings = localStorage.getItem('ticketplus_guest_bookings');
+        if (rawBookings) {
+          const parsedB = JSON.parse(rawBookings);
+          localActiveTickets = parsedB.filter((b: any) => b.status !== 'cancelled').length;
+        }
+      } catch (e) {
+        console.warn('Storage read warning in header:', e);
       }
-    }
-    fetchNotifs();
-    return () => { isMounted = false; };
+
+      // 2. Si connecté, synchroniser avec l'API
+      if (user) {
+        try {
+          const [notifsRes, bookingsRes] = await Promise.all([
+            fetch('/api/notifications'),
+            fetch('/api/bookings')
+          ]);
+
+          if (notifsRes.ok) {
+            const data = await notifsRes.json();
+            if (isMounted && data.notifications) {
+              const apiUnread = data.notifications.filter((n: any) => !n.is_read).length;
+              localUnread = Math.max(localUnread, apiUnread);
+            }
+          }
+
+          if (bookingsRes.ok) {
+            const bData = await bookingsRes.json();
+            if (isMounted && bData.bookings) {
+              const apiActive = bData.bookings.filter((b: any) => b.status === 'confirmed' || b.status === 'pending').length;
+              localActiveTickets = Math.max(localActiveTickets, apiActive);
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to load counts in header:', err);
+        }
+      }
+
+      if (isMounted) {
+        setUnreadNotifs(localUnread);
+        setActiveTicketsCount(localActiveTickets);
+      }
+    };
+
+    refreshCounts();
+
+    const handleCustomUpdate = () => refreshCounts();
+    window.addEventListener('ticketplus_update', handleCustomUpdate);
+    window.addEventListener('storage', handleCustomUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('ticketplus_update', handleCustomUpdate);
+      window.removeEventListener('storage', handleCustomUpdate);
+    };
   }, [user, pathname]);
 
   // Ne pas afficher le Header sur la page login ou register
@@ -148,14 +194,19 @@ export const Header = () => {
               <span className="material-symbols-outlined text-[20px]">chat</span>
             </a>
 
-            {/* Mon Billet Primary Button */}
+            {/* Mon Billet Primary Button avec badge actif */}
             <Link
               href={`/${locale}/mon-billet`}
               prefetch={true}
-              className="h-10 px-3.5 sm:px-4 flex items-center justify-center rounded-xl bg-primary hover:bg-primary-container text-on-primary text-[13px] font-bold transition-all active:scale-95 duration-75 shadow-sm whitespace-nowrap gap-1.5"
+              className="relative h-10 px-3.5 sm:px-4 flex items-center justify-center rounded-xl bg-primary hover:bg-primary-container text-on-primary text-[13px] font-bold transition-all active:scale-95 duration-75 shadow-sm whitespace-nowrap gap-1.5"
             >
               <span className="material-symbols-outlined text-[18px]">confirmation_number</span>
               <span>Mon Billet</span>
+              {activeTicketsCount > 0 && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-[#00D084] text-[#0B1324] text-[11px] font-black shadow-sm border border-white/20 animate-scale-in">
+                  {activeTicketsCount}
+                </span>
+              )}
             </Link>
 
             {/* Notifications Button */}

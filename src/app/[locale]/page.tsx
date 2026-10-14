@@ -145,18 +145,27 @@ export default function LandingPage() {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
-  // Si l'utilisateur est connecté :
-  // - Les partenaires vont au portail compagnie
-  // - Les administrateurs vont au dashboard admin
-  // - Les voyageurs voient directement la recherche de billets
-  if (!isLoading && user) {
-    if (role === 'partner') {
-      if (typeof window !== 'undefined') window.location.href = '/partner';
-      return null;
+  // Redirection propre des rôles d'administration
+  React.useEffect(() => {
+    if (!isLoading && user) {
+      if (role === 'partner') {
+        window.location.href = '/partner';
+      } else if (role === 'admin') {
+        window.location.href = '/admin';
+      }
     }
-    if (role === 'admin') {
-      if (typeof window !== 'undefined') window.location.href = '/admin';
-      return null;
+  }, [isLoading, user, role]);
+
+  // Si l'utilisateur est connecté voyageur : afficher l'accueil voyageur
+  if (!isLoading && user) {
+    if (role === 'partner' || role === 'admin') {
+      return (
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <span className="material-symbols-outlined text-[32px] text-emerald-600 animate-spin">
+            progress_activity
+          </span>
+        </div>
+      );
     }
     return <AccueilVoyageurPage />;
   }

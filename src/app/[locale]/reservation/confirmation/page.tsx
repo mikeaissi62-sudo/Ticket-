@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
@@ -25,6 +26,71 @@ export default function BookingConfirmationPage() {
   const ref = searchParams.get('ref') || 'TK-78B451';
 
   const bookingData = { ref, from, to, date: dateParam, seat, payment, price, name, phone, company };
+
+  // Dès la confirmation d'achat : enregistrer le billet et créer la notification
+  useEffect(() => {
+    try {
+      const bookingRef = ref && ref.startsWith('TK') ? ref : `TKP-${ref}`;
+      const rawPrice = price ? Number(String(price).replace(/[^0-9]/g, '')) : 7500;
+      const formattedPrice = (rawPrice > 0 ? rawPrice : 7500).toLocaleString('fr-FR');
+
+      // 1. Sauvegarde dans les réservations accessibles sur "Mon Billet"
+      const storedBookings = localStorage.getItem('ticketplus_guest_bookings');
+      const bookingsList = storedBookings ? JSON.parse(storedBookings) : [];
+      const alreadyExists = bookingsList.some((b: any) => b.ref === bookingRef);
+
+      if (!alreadyExists) {
+        bookingsList.unshift({
+          id: `booking-${Date.now()}`,
+          ref: bookingRef,
+          from,
+          to,
+          date: dateParam,
+          departure: '07:00',
+          seat,
+          price: rawPrice > 0 ? rawPrice : 7500,
+          status: 'confirmed',
+          passenger: name || 'Voyageur',
+          payment: payment.includes('moov') ? 'Moov Money (Payé)' : 'MTN MoMo (Payé)',
+          companyName: company || 'Confort Lines VIP',
+          isFlexible: true,
+          created_at: new Date().toISOString(),
+        });
+        localStorage.setItem('ticketplus_guest_bookings', JSON.stringify(bookingsList));
+      }
+
+      // 2. Création de la notification d'achat confirmée
+      const storedNotifs = localStorage.getItem('ticketplus_notifications');
+      const notifsList = storedNotifs ? JSON.parse(storedNotifs) : [];
+      const notifAlreadyExists = notifsList.some((n: any) => n.booking_ref === bookingRef);
+
+      if (!notifAlreadyExists) {
+        const newNotif = {
+          id: `notif-${Date.now()}`,
+          title: `Billet réservé avec succès (${bookingRef})`,
+          message: `Votre trajet ${from} ➔ ${to} (Siège N° ${seat}) chez ${company} est confirmé. Montant payé : ${formattedPrice} FCFA. Vous pouvez le consulter et le télécharger.`,
+          type: 'booking',
+          booking_ref: bookingRef,
+          is_read: false,
+          created_at: new Date().toISOString(),
+        };
+        notifsList.unshift(newNotif);
+        localStorage.setItem('ticketplus_notifications', JSON.stringify(notifsList));
+
+        // Enregistrer également sur le serveur si connecté
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newNotif),
+        }).catch(() => {});
+      }
+
+      // Notifier le Header pour actualiser immédiatement les compteurs
+      window.dispatchEvent(new Event('ticketplus_update'));
+    } catch (e) {
+      console.warn('Booking confirmation sync warning:', e);
+    }
+  }, [ref, from, to, dateParam, seat, payment, price, name, phone, company]);
 
   return (
     <main className="min-h-screen bg-surface pb-10 pt-6 print:p-0 print:m-0 print:bg-white print:min-h-0">
@@ -59,7 +125,7 @@ export default function BookingConfirmationPage() {
           <div className="print:hidden lg:col-span-4 space-y-space-lg">
             <ActionButtons phone={phone} data={bookingData} />
             <StationInfo from={from} />
-            <ModifyBooking />
+            <ModifyBooking data={bookingData} />
           </div>
         </div>
 
