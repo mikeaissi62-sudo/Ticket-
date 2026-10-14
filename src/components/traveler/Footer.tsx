@@ -18,7 +18,7 @@ export const Footer = () => {
   const buildSearchUrl = (from: string, to: string) => `/${locale}/resultats?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${todayStr}&passengers=1`;
 
   return (
-    <footer className="w-full bg-surface-container-lowest shadow-[0_-1px_12px_rgba(0,0,0,0.03)]">
+    <footer className="print:hidden w-full bg-surface-container-lowest shadow-[0_-1px_12px_rgba(0,0,0,0.03)]">
       <div className="max-w-[1140px] mx-auto px-gutter pt-space-xl pb-space-lg">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-xl mb-space-xl">
           

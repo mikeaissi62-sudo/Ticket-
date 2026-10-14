@@ -49,9 +49,9 @@ export default function BookingConfirmationPage() {
           <ConfirmationHeader />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg print:block">
-          {/* Colonne Principale : Le Billet */}
-          <div className="lg:col-span-8 flex justify-center print:w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start print:block">
+          {/* Colonne Principale : Le Billet (hauteur naturelle sans espace vide) */}
+          <div className="lg:col-span-8 flex justify-center items-start self-start print:w-full">
             <TicketCard data={bookingData} />
           </div>
 

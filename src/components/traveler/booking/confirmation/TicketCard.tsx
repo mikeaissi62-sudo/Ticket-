@@ -71,6 +71,9 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
   const seatDisplay = getSeatDisplay(data.seat || '14');
   const paymentDisplay = getPaymentDisplay(data.payment || 'mtn');
 
+  const rawPrice = data.price ? Number(String(data.price).replace(/[^0-9]/g, '')) : 7500;
+  const formattedPrice = (rawPrice > 0 ? rawPrice : 7500).toLocaleString('fr-FR');
+
   // Format de référence identique à l'image : TKP-2026-9812
   const bookingRef = data.ref && data.ref.startsWith('TK') 
     ? data.ref 
@@ -100,7 +103,7 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
   return (
     <div 
       id="printable-ticket" 
-      className="ticket-card-container w-full max-w-[480px] sm:max-w-[500px] mx-auto rounded-[32px] shadow-[0_20px_50px_rgba(11,19,43,0.16)] border border-slate-200/80 overflow-hidden bg-white font-['Plus_Jakarta_Sans',sans-serif] transition-all select-none"
+      className="ticket-card-container w-full max-w-[480px] sm:max-w-[500px] mx-auto rounded-[32px] shadow-[0_20px_50px_rgba(11,19,43,0.16)] border border-slate-200/80 overflow-hidden bg-white font-['Plus_Jakarta_Sans',sans-serif] transition-all select-none h-fit"
     >
       {/* ============================================================ */}
       {/* 1. EN-TÊTE SOMBRE (Header avec fond bleu nuit / noir ébène)   */}
@@ -216,12 +219,15 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
             </div>
           </div>
 
-          {/* Paiement */}
+          {/* Montant Payé & Mode */}
           <div>
             <span className="text-[#94A3B8] text-[11px] font-bold uppercase tracking-wider block">
-              PAIEMENT
+              MONTANT PAYÉ
             </span>
             <div className="text-[#0F172A] font-extrabold text-[15px] sm:text-[16px] mt-1 truncate">
+              {formattedPrice} FCFA
+            </div>
+            <div className="text-[#059669] text-[11px] font-semibold mt-0.5">
               {paymentDisplay}
             </div>
           </div>
@@ -261,13 +267,13 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
 
         </div>
 
-        {/* Bouton d'action en bas : Réserver un billet identique */}
+        {/* Bouton d'action en bas : Réserver un autre billet */}
         <button
           type="button"
           onClick={handleBookIdentical}
           className="print:hidden w-full mt-6 py-3.5 px-6 rounded-2xl bg-[#0B1324] hover:bg-[#1E293B] text-white font-bold text-[14px] sm:text-[15px] flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
         >
-          <span>Réserver un billet identique</span>
+          <span>Réserver un autre billet</span>
           <span className="material-symbols-outlined text-[18px]">
             arrow_forward
           </span>

@@ -86,8 +86,48 @@ export default function MonBilletPage() {
   };
 
   const handleSendWhatsApp = async (t: Ticket) => {
-    showFeedback(`Génération du billet WhatsApp pour ${t.ref}...`);
+    showFeedback(`Génération de l'image du billet WhatsApp pour ${t.ref}...`);
     try {
+      const ticketNode = document.getElementById('printable-ticket');
+      let ticketBlob: Blob | null = null;
+      let ticketDataUrl: string | null = null;
+
+      if (ticketNode) {
+        try {
+          const { toBlob: generateBlob, toPng: generatePng } = await import('html-to-image');
+          ticketBlob = await generateBlob(ticketNode, {
+            pixelRatio: 2,
+            filter: (node) => !(node as HTMLElement).classList?.contains('print:hidden'),
+          });
+          ticketDataUrl = await generatePng(ticketNode, {
+            pixelRatio: 2,
+            filter: (node) => !(node as HTMLElement).classList?.contains('print:hidden'),
+          });
+        } catch (imgErr) {
+          console.warn('Image capture warning:', imgErr);
+        }
+      }
+
+      if (ticketBlob && typeof navigator !== 'undefined' && 'canShare' in navigator) {
+        const ticketFile = new File([ticketBlob], `billet-ticketplus-${t.ref}.png`, { type: 'image/png' });
+        if (navigator.canShare({ files: [ticketFile] })) {
+          await navigator.share({
+            files: [ticketFile],
+            title: `E-Billet Ticket+ ${t.ref}`,
+            text: `🎫 E-Billet officiel Ticket+ Bénin (${t.ref}) pour ${t.from} ➔ ${t.to}. Siège N° ${t.seat}.`,
+          });
+          showFeedback(`Billet ${t.ref} partagé sur WhatsApp !`);
+          return;
+        }
+      }
+
+      if (ticketDataUrl) {
+        const link = document.createElement('a');
+        link.download = `billet-ticketplus-${t.ref}.png`;
+        link.href = ticketDataUrl;
+        link.click();
+      }
+
       const res = await fetch('/api/notifications/whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,9 +146,9 @@ export default function MonBilletPage() {
       const data = await res.json();
       if (res.ok && data.whatsapp_url) {
         window.open(data.whatsapp_url, '_blank');
-        showFeedback(`Billet ${t.ref} envoyé sur WhatsApp !`);
+        showFeedback(`Image du billet ${t.ref} enregistrée et redirection WhatsApp !`);
       } else {
-        showFeedback(`Billet ${t.ref} prêt sur WhatsApp.`);
+        showFeedback(`Image du billet ${t.ref} enregistrée avec succès.`);
       }
     } catch {
       showFeedback(`Billet ${t.ref} généré pour WhatsApp.`);

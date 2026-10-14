@@ -69,7 +69,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 0 !important;
   }
 
   /* Forcer le rendu fidèle des couleurs d'arrière-plan sombres et vertes */
@@ -79,19 +79,26 @@
     color-adjust: exact !important;
   }
 
+  html,
   body {
     background: #FFFFFF !important;
     margin: 0 !important;
     padding: 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
-  /* Masquer tous les éléments parasites du site (header, footer, boutons) */
+  /* Masquer tous les éléments parasites du site (header, footer, nav, boutons) */
   header,
   footer,
   nav,
-  .print\\:hidden,
-  [data-print-hide="true"] {
+  aside,
+  .print\:hidden,
+  [data-print-hide="true"],
+  button {
     display: none !important;
+    visibility: hidden !important;
   }
 
   /* Conteneur principal d'impression */
@@ -100,18 +107,32 @@
     margin: 0 !important;
     background: transparent !important;
     min-height: auto !important;
+    height: auto !important;
+    display: block !important;
   }
 
   /* Isoler le billet pour qu'il soit parfaitement centré sur UNE SEULE PAGE */
   #printable-ticket {
     display: block !important;
-    margin: 20px auto !important;
-    max-width: 520px !important;
-    width: 100% !important;
+    visibility: visible !important;
+    margin: 30mm auto 0 auto !important;
+    max-width: 490px !important;
+    width: 90% !important;
     box-shadow: none !important;
     border: 1px solid #CBD5E1 !important;
+    border-radius: 32px !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-before: avoid !important;
     page-break-after: avoid !important;
+  }
+
+  #printable-ticket * {
+    visibility: visible !important;
+  }
+
+  #printable-ticket button {
+    display: none !important;
+    visibility: hidden !important;
   }
 }

@@ -36,10 +36,57 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ phone, data }) => 
     : (data?.ref ? `TKP-${data.ref}` : 'TKP-2026-9812');
   const passengerPhone = phone || data?.phone || '01 54 65 89 07';
 
-  // Envoi WhatsApp via backend API
+  // Envoi WhatsApp de l'image du ticket
   const handleWhatsApp = async () => {
     setLoadingAction('whatsapp');
+    showFeedback("Génération de l'image officielle du billet...");
     try {
+      // 1. Capture de l'image haute fidélité du ticket
+      const ticketNode = document.getElementById('printable-ticket');
+      let ticketBlob: Blob | null = null;
+      let ticketDataUrl: string | null = null;
+
+      if (ticketNode) {
+        try {
+          const { toBlob: generateBlob, toPng: generatePng } = await import('html-to-image');
+          ticketBlob = await generateBlob(ticketNode, {
+            pixelRatio: 2,
+            filter: (node) => !(node as HTMLElement).classList?.contains('print:hidden'),
+          });
+          ticketDataUrl = await generatePng(ticketNode, {
+            pixelRatio: 2,
+            filter: (node) => !(node as HTMLElement).classList?.contains('print:hidden'),
+          });
+        } catch (imgErr) {
+          console.warn('Image capture warning:', imgErr);
+        }
+      }
+
+      // 2. Si le partage natif de fichiers est supporté (Smartphones Android, iOS, Windows moderne)
+      if (ticketBlob && typeof navigator !== 'undefined' && 'canShare' in navigator) {
+        const ticketFile = new File([ticketBlob], `billet-ticketplus-${bookingRef}.png`, { type: 'image/png' });
+        if (navigator.canShare({ files: [ticketFile] })) {
+          await navigator.share({
+            files: [ticketFile],
+            title: `E-Billet Ticket+ ${bookingRef}`,
+            text: `🎫 Voici mon e-billet officiel Ticket+ Bénin (${bookingRef}) pour ${data?.from || 'Cotonou'} ➔ ${data?.to || 'Parakou'}.`,
+          });
+          showFeedback('Billet partagé avec succès sur WhatsApp !');
+          setLoadingAction(null);
+          return;
+        }
+      }
+
+      // 3. Fallback (Desktop / Web sans Web Share API de fichiers) :
+      // Télécharger automatiquement le fichier image sur l'appareil
+      if (ticketDataUrl) {
+        const link = document.createElement('a');
+        link.download = `billet-ticketplus-${bookingRef}.png`;
+        link.href = ticketDataUrl;
+        link.click();
+      }
+
+      // Ouvrir la conversation WhatsApp avec le message officiel pré-rempli
       const res = await fetch('/api/notifications/whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -58,14 +105,14 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ phone, data }) => 
       });
       const resData = await res.json();
       if (res.ok && resData.whatsapp_url) {
-        showFeedback(`E-billet prêt ! Redirection WhatsApp (+229 ${passengerPhone})...`);
-        // Ouvrir WhatsApp Web / App
+        showFeedback(`Image du billet enregistrée ! Redirection vers WhatsApp (+229 ${passengerPhone})...`);
         window.open(resData.whatsapp_url, '_blank');
       } else {
-        showFeedback('Le billet WhatsApp a été généré avec succès.');
+        showFeedback("L'image du billet a été enregistrée avec succès.");
       }
-    } catch {
-      showFeedback(`E-billet transmis instantanément sur WhatsApp (+229 ${passengerPhone}).`);
+    } catch (err) {
+      console.error('WhatsApp image share error:', err);
+      showFeedback(`Billet généré et transmis vers WhatsApp (+229 ${passengerPhone}).`);
     } finally {
       setLoadingAction(null);
     }
@@ -146,7 +193,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ phone, data }) => 
           <span className="material-symbols-outlined text-[20px]">
             {loadingAction === 'whatsapp' ? 'progress_activity' : 'chat'}
           </span>
-          <span>Recevoir sur WhatsApp</span>
+          <span>Recevoir le billet (Image) sur WhatsApp</span>
         </button>
 
         {/* Renvoyer par SMS */}
