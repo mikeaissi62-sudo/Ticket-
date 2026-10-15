@@ -5,6 +5,7 @@ import {getMessages} from 'next-intl/server';
 import {notFound} from 'next/navigation';
 import { Header } from "../../components/traveler/Header";
 import { Footer } from "../../components/traveler/Footer";
+import { ChatAssistant } from "../../components/traveler/ChatAssistant";
 import { AuthProvider } from "@/lib/auth/client-guards";
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default async function RootLayout({
               {children}
             </main>
             <Footer />
+            <ChatAssistant />
           </AuthProvider>
         </NextIntlClientProvider>
       </body>
