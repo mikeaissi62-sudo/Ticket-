@@ -258,27 +258,25 @@ export function ChatAssistant() {
         </div>
       )}
 
-      {/* Bouton rond flottant d'ouverture */}
+      {/* Bouton logo compact flottant */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative group flex items-center gap-2.5 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-800 text-white px-4 py-3.5 rounded-full shadow-2xl hover:shadow-emerald-900/30 hover:scale-105 active:scale-95 transition-all duration-200 border border-emerald-500/30"
-        title={isOpen ? 'Fermer l\'assistant' : 'Ouvrir l\'assistant IA Ticket+'}
+        className="relative group flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-slate-900 via-slate-800 to-emerald-600 text-white shadow-xl hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all duration-300 border border-emerald-400/40"
+        title={isOpen ? "Fermer l'assistant" : "Assistant Ticket+ IA"}
+        aria-label={isOpen ? "Fermer l'assistant IA" : "Ouvrir l'assistant IA Ticket+"}
       >
-        <div className="relative flex items-center justify-center">
-          <span className="material-symbols-outlined text-[24px] text-emerald-400 group-hover:rotate-12 transition-transform">
-            {isOpen ? 'close' : 'smart_toy'}
+        <span className="material-symbols-outlined text-[24px] sm:text-[26px] text-emerald-300 group-hover:rotate-6 transition-transform">
+          {isOpen ? 'close' : 'smart_toy'}
+        </span>
+
+        {/* Badge indicateur discret En ligne / Non lu */}
+        {!isOpen && (
+          <span className="absolute top-1 right-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-slate-900"></span>
           </span>
-          {hasUnread && !isOpen && (
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping"></span>
-          )}
-        </div>
-        <span className="font-semibold text-sm tracking-wide hidden sm:inline">
-          {isOpen ? 'Fermer' : 'Assistant Ticket+'}
-        </span>
-        <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-          IA
-        </span>
+        )}
       </button>
     </div>
   );

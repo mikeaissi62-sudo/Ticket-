@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # ========================================================
+  # 1. Application Ticket+ (Next.js 14 Standalone)
+  # ========================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://bhjswsemxnzrzctwgext.supabase.co}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJoanN3c2VteG56cnpjdHdnZXh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4MDgxMjYsImV4cCI6MjEwNzM4NDEyNn0.mMSXDP8fr7n42Rzvi3_cfPravmZEPsV5wIes9OtOcIA}
+    container_name: ticket-plus-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=postgresql://ticket_user:ticket_pass_2026@postgres:5432/ticket_plus_db
+      - REDIS_URL=redis://redis:6379
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - PHONE_OTP_MODE=${PHONE_OTP_MODE:-demo}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ticket-network
+
+  # ========================================================
+  # 2. Base de données PostgreSQL 16
+  # ========================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: ticket-plus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ticket_plus_db
+      POSTGRES_USER: ticket_user
+      POSTGRES_PASSWORD: ticket_pass_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticket_user -d ticket_plus_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ticket-network
+
+  # ========================================================
+  # 3. Cache Redis 7
+  # ========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ticket-plus-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ticket-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  ticket-network:
+    driver: bridge
