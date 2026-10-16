@@ -38,6 +38,31 @@ export class PaymentService {
         ? req.booking_id
         : `TK-BEN-${Math.floor(100000 + Math.random() * 900000)}`);
     const amount = req.amount || (booking ? Number(booking.total_price) : 7500);
+
+    // Contrôle d'Idempotence : Si la réservation est déjà payée/confirmée, ne pas relancer de débit
+    if (booking && booking.status === 'confirmed') {
+      const { data: existingPay } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('booking_id', booking.id)
+        .eq('status', 'success')
+        .limit(1);
+
+      if (existingPay && existingPay.length > 0) {
+        return {
+          success: true,
+          payment_id: existingPay[0].id,
+          transaction_id: existingPay[0].transaction_id,
+          booking_reference: bookingRef,
+          provider: existingPay[0].provider,
+          status: 'success',
+          amount: existingPay[0].amount,
+          phone: req.phone,
+          ussd_prompt: 'Ce billet a déjà été validé et payé avec succès.',
+          instructions: 'Votre billet est déjà disponible dans votre espace Mon Billet.',
+        };
+      }
+    }
     let transactionId = '';
     let ussdPrompt = '';
     let instructions = '';
@@ -148,6 +173,20 @@ export class PaymentService {
     const payment = payments[0];
     const booking = payment.booking;
 
+    // Idempotence : Si déjà confirmé et ticket existant, renvoyer directement le succès
+    if (payment.status === 'success' && booking?.status === 'confirmed') {
+      return {
+        success: true,
+        payment_id: payment.id,
+        booking_id: booking.id,
+        booking_reference: booking.booking_reference,
+        provider: payment.provider,
+        status: 'success',
+        amount: payment.amount,
+        paid_at: payment.paid_at || new Date().toISOString(),
+      };
+    }
+
     // 1. Mettre à jour le paiement à 'success'
     await supabase
       .from('payments')
@@ -167,7 +206,7 @@ export class PaymentService {
       })
       .eq('id', booking.id);
 
-    // 3. Créer le billet officiel avec données QR Code
+    // 3. Créer le billet officiel avec données QR Code (seulement s'il n'existe pas déjà)
     const qrData = JSON.stringify({
       ref: booking.booking_reference,
       booking_id: booking.id,
@@ -178,25 +217,45 @@ export class PaymentService {
       platform: 'Ticket+ Bénin',
     });
 
-    const { data: ticket } = await supabase
+    const { data: existingTicket } = await supabase
       .from('tickets')
-      .insert({
-        booking_id: booking.id,
-        qr_code_data: qrData,
-        is_used: false,
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('booking_id', booking.id)
+      .limit(1);
 
-    // 4. Créer la notification pour l'utilisateur
+    let ticketId = existingTicket && existingTicket.length > 0 ? existingTicket[0].id : null;
+
+    if (!existingTicket || existingTicket.length === 0) {
+      const { data: newTicket } = await supabase
+        .from('tickets')
+        .insert({
+          booking_id: booking.id,
+          qr_code_data: qrData,
+          is_used: false,
+        })
+        .select('id')
+        .single();
+      ticketId = newTicket?.id || null;
+    }
+
+    // 4. Créer la notification pour l'utilisateur (seulement si non existante)
     if (booking.user_id) {
-      await supabase.from('notifications').insert({
-        user_id: booking.user_id,
-        title: `Paiement validé (${booking.booking_reference})`,
-        message: `Votre paiement de ${Number(payment.amount).toLocaleString('fr-FR')} FCFA par ${payment.provider.toUpperCase()} est confirmé. Votre billet officiel est prêt.`,
-        type: 'booking',
-        is_read: false,
-      });
+      const { data: existingNotifs } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', booking.user_id)
+        .ilike('title', `%${booking.booking_reference}%`)
+        .limit(1);
+
+      if (!existingNotifs || existingNotifs.length === 0) {
+        await supabase.from('notifications').insert({
+          user_id: booking.user_id,
+          title: `Paiement validé (${booking.booking_reference})`,
+          message: `Votre paiement de ${Number(payment.amount).toLocaleString('fr-FR')} FCFA par ${payment.provider.toUpperCase()} est confirmé. Votre billet officiel est prêt.`,
+          type: 'booking',
+          is_read: false,
+        });
+      }
     }
 
     return {
@@ -209,7 +268,7 @@ export class PaymentService {
       amount: payment.amount,
       paid_at: new Date().toISOString(),
       qr_code_data: qrData,
-      ticket_id: ticket?.id,
+      ticket_id: ticketId,
     };
   }
 

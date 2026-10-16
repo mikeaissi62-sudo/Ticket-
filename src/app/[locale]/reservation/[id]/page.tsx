@@ -11,6 +11,23 @@ interface SeatData {
   status: 'available' | 'reserved' | 'sold';
 }
 
+const AFRICAN_COUNTRIES = [
+  { code: 'BJ', name: 'Bénin', dialCode: '+229', flag: '🇧🇯', digits: 10, placeholder: '01 54 65 89 07' },
+  { code: 'TG', name: 'Togo', dialCode: '+228', flag: '🇹🇬', digits: 8, placeholder: '90 12 34 56' },
+  { code: 'NG', name: 'Nigéria', dialCode: '+234', flag: '🇳🇬', digits: 10, placeholder: '80 12 34 56 78' },
+  { code: 'CI', name: "Côte d'Ivoire", dialCode: '+225', flag: '🇨🇮', digits: 10, placeholder: '07 01 23 45 67' },
+  { code: 'NE', name: 'Niger', dialCode: '+227', flag: '🇳🇪', digits: 8, placeholder: '90 12 34 56' },
+  { code: 'BF', name: 'Burkina Faso', dialCode: '+226', flag: '🇧🇫', digits: 8, placeholder: '70 12 34 56' },
+  { code: 'GH', name: 'Ghana', dialCode: '+233', flag: '🇬🇭', digits: 9, placeholder: '24 123 4567' },
+  { code: 'SN', name: 'Sénégal', dialCode: '+221', flag: '🇸🇳', digits: 9, placeholder: '77 123 45 67' },
+  { code: 'ML', name: 'Mali', dialCode: '+223', flag: '🇲🇱', digits: 8, placeholder: '66 12 34 56' },
+  { code: 'GN', name: 'Guinée', dialCode: '+224', flag: '🇬🇳', digits: 9, placeholder: '62 123 4567' },
+  { code: 'CM', name: 'Cameroun', dialCode: '+237', flag: '🇨🇲', digits: 9, placeholder: '6 71 23 45 67' },
+  { code: 'GA', name: 'Gabon', dialCode: '+241', flag: '🇬🇦', digits: 8, placeholder: '06 12 34 56' },
+  { code: 'CG', name: 'Congo', dialCode: '+242', flag: '🇨🇬', digits: 9, placeholder: '06 123 4567' },
+  { code: 'CD', name: 'RDC', dialCode: '+243', flag: '🇨🇩', digits: 9, placeholder: '81 234 5678' },
+];
+
 export default function BookingPage() {
   const params = useParams();
   const locale = useLocale();
@@ -20,6 +37,7 @@ export default function BookingPage() {
   const { selectedTrip, setPassengerInfo, setExtras, setPaymentMethod: setStorePaymentMethod, selectSeats } = useBookingStore();
   
   const [selectedSeat, setSelectedSeat] = useState<string>("01");
+  const [selectedCountry, setSelectedCountry] = useState(AFRICAN_COUNTRIES[0]);
   const [extraLuggage, setExtraLuggage] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("mtn");
   const [seats, setSeats] = useState<SeatData[]>([]);
@@ -81,22 +99,6 @@ export default function BookingPage() {
     }
   }, [disabledSeatNumbers, selectedSeat]);
 
-  if (!selectedTrip) {
-    return <div className="p-8 text-center text-on-surface">Redirection vers les résultats...</div>;
-  }
-
-  const companyName = selectedTrip.companyName || 'Compagnie Partenaire';
-  const carName = `Autocar ${companyName}`;
-  const bannerImg = "/images/bus-banner.jpg";
-
-  const from = selectedTrip.from || 'Cotonou';
-  const to = selectedTrip.to || 'Parakou';
-  const dateParam = selectedTrip.date || new Date().toISOString().split('T')[0];
-
-  const basePrice = selectedTrip.price;
-  const extraLuggagePrice = extraLuggage ? 1000 : 0;
-  const totalPrice = basePrice + extraLuggagePrice;
-  
   const [momoSession, setMomoSession] = useState<{
     paymentId: string;
     provider: 'mtn_momo' | 'moov_money';
@@ -143,16 +145,20 @@ export default function BookingPage() {
             clearInterval(poller);
             setMomoSession((prev) => prev ? { ...prev, status: 'success' } : null);
             setTimeout(() => {
-              router.push(`/${locale}/reservation/confirmation?${momoSession.confirmUrlParams}&status=success`);
-            }, 1800);
+              router.push(`/${locale}/reservation/confirmation?${momoSession.confirmUrlParams}`);
+            }, 1200);
           } else if (data.status === 'failed') {
             clearInterval(timer);
             clearInterval(poller);
-            setMomoSession((prev) => prev ? { ...prev, status: 'failed', errorMessage: data.message || 'Paiement rejeté.' } : null);
+            setMomoSession((prev) => prev ? {
+              ...prev,
+              status: 'failed',
+              errorMessage: data.errorMessage || 'Le paiement mobile a échoué ou a été refusé.',
+            } : null);
           }
         }
       } catch (err) {
-        console.error('Status poll error:', err);
+        console.error('Erreur vérification paiement:', err);
       }
     }, 3000);
 
@@ -160,7 +166,25 @@ export default function BookingPage() {
       clearInterval(timer);
       clearInterval(poller);
     };
-  }, [momoSession?.paymentId, momoSession?.status, locale, router]);
+  }, [momoSession, router, locale]);
+
+  if (!selectedTrip) {
+    return <div className="p-8 text-center text-on-surface">Redirection vers les résultats...</div>;
+  }
+
+  const companyName = selectedTrip.companyName || 'Compagnie Partenaire';
+  const carName = `Autocar ${companyName}`;
+  const bannerImg = "/images/bus-banner.jpg";
+
+  const from = selectedTrip.from || 'Cotonou';
+  const to = selectedTrip.to || 'Parakou';
+  const dateParam = selectedTrip.date || new Date().toISOString().split('T')[0];
+
+  const basePrice = selectedTrip.price;
+  const extraLuggagePrice = extraLuggage ? 1000 : 0;
+  const totalPrice = basePrice + extraLuggagePrice;
+  
+
 
   const handleManualConfirmPayment = async (otpCode?: string) => {
     if (!momoSession) return;
@@ -201,16 +225,17 @@ export default function BookingPage() {
       return;
     }
 
-    if (!phone || phone.length < 8) {
-      alert('Veuillez renseigner un numéro de téléphone béninois valide (ex: 97 12 34 56 ou +229 01...)');
+    if (!phone || phone.length < 6) {
+      alert('Veuillez renseigner un numéro de téléphone valide.');
       phoneEl?.focus();
       return;
     }
 
+    const fullPhone = `${selectedCountry.dialCode} ${phone}`;
     const firstName = fullName.split(' ')[0] || 'Voyageur';
     const lastName = fullName.split(' ').slice(1).join(' ') || '';
 
-    setPassengerInfo({ firstName, lastName, phone, idType: 'cni' });
+    setPassengerInfo({ firstName, lastName, phone: fullPhone, idType: 'cni' });
     setExtras(extraLuggage, true);
     setStorePaymentMethod(paymentMethod);
     selectSeats([parseInt(selectedSeat, 10)]);
@@ -578,11 +603,23 @@ export default function BookingPage() {
                 <div className="space-y-1">
                   <label className="block font-label-md text-label-md font-semibold text-on-surface" htmlFor="phone">Téléphone WhatsApp &amp; SMS *</label>
                   <div className="relative flex">
-                    <div className="bg-surface-container px-3 py-2.5 rounded-l-xl font-label-md text-label-md font-semibold text-on-surface flex items-center gap-1.5 border-r border-outline-variant/30">
-                      <span>🇧🇯</span>
-                      <span>+229</span>
-                    </div>
-                    <input className="w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-r-xl px-3 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none border border-transparent focus:border-outline-variant" id="phone" placeholder="01 54 65 89 07" type="tel" defaultValue="01 64 28 90" />
+                    <select
+                      value={selectedCountry.code}
+                      onChange={(e) => {
+                        const found = AFRICAN_COUNTRIES.find(c => c.code === e.target.value);
+                        if (found) setSelectedCountry(found);
+                      }}
+                      className="bg-surface-container px-2.5 py-2.5 rounded-l-xl font-label-md text-label-md font-semibold text-on-surface flex items-center border-r border-outline-variant/30 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+                      title="Choisir le pays"
+                      aria-label="Indicatif pays"
+                    >
+                      {AFRICAN_COUNTRIES.map(c => (
+                        <option key={c.code} value={c.code}>
+                          {c.flag} {c.dialCode} ({c.name})
+                        </option>
+                      ))}
+                    </select>
+                    <input className="w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-r-xl px-3 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none border border-transparent focus:border-outline-variant" id="phone" placeholder={selectedCountry.placeholder} type="tel" defaultValue="01 64 28 90" />
                   </div>
                   <span className="font-label-sm text-label-sm text-secondary block mt-1">Billet électronique instantané et alertes de départ envoyés ici</span>
                 </div>

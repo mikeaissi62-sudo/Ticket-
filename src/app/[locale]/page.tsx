@@ -81,28 +81,8 @@ export default function LandingPage() {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
-  // Redirection propre des rôles d'administration
-  React.useEffect(() => {
-    if (!isLoading && user) {
-      if (role === 'partner') {
-        window.location.href = '/partner';
-      } else if (role === 'admin') {
-        window.location.href = '/admin';
-      }
-    }
-  }, [isLoading, user, role]);
-
-  // Si l'utilisateur est connecté voyageur : afficher l'accueil voyageur
+  // Si l'utilisateur est connecté : afficher l'espace d'accueil voyageur
   if (!isLoading && user) {
-    if (role === 'partner' || role === 'admin') {
-      return (
-        <div className="min-h-[50vh] flex items-center justify-center">
-          <span className="material-symbols-outlined text-[32px] text-emerald-600 animate-spin">
-            progress_activity
-          </span>
-        </div>
-      );
-    }
     return <AccueilVoyageurPage />;
   }
 

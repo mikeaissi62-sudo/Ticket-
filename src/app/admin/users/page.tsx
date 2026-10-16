@@ -55,51 +55,7 @@ export default function AdminUsersPage() {
           }))
         );
       } else {
-        // Mock data représentatif
-        setUsers([
-          {
-            id: 'u1',
-            name: 'Mike AISSI (Propriétaire)',
-            email: 'mikeaissi62@gmail.com',
-            phone: '+229 01 64 28 90 00',
-            role: 'admin',
-            created_at: '10/09/2026',
-          },
-          {
-            id: 'u2',
-            name: 'Responsable Confort Lines',
-            email: 'operation@confortlines.bj',
-            phone: '+229 01 97 00 11 22',
-            role: 'partner',
-            company_name: 'Confort Lines',
-            created_at: '15/09/2026',
-          },
-          {
-            id: 'u3',
-            name: 'Chef de Gare Baobab Express',
-            email: 'gare@baobabexpress.bj',
-            phone: '+229 01 96 33 44 55',
-            role: 'partner',
-            company_name: 'Baobab Express',
-            created_at: '18/09/2026',
-          },
-          {
-            id: 'u4',
-            name: 'Koffi Christian DOSSOU',
-            email: 'koffi.dossou@gmail.com',
-            phone: '+229 01 64 28 90',
-            role: 'traveler',
-            created_at: '25/09/2026',
-          },
-          {
-            id: 'u5',
-            name: 'Awa BIO TCHANE',
-            email: 'awa.biotchane@yahoo.fr',
-            phone: '+229 01 90 12 34 56',
-            role: 'traveler',
-            created_at: '01/10/2026',
-          },
-        ]);
+        setUsers([]);
       }
     } catch (err) {
       console.error('Erreur utilisateurs:', err);
@@ -192,7 +148,14 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {filtered.map((u) => (
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs font-medium">
+                      Aucun compte utilisateur trouvé.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
@@ -237,7 +200,7 @@ export default function AdminUsersPage() {
                       </select>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

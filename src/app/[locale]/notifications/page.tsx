@@ -566,27 +566,7 @@ export default function NotificationsCenterPage() {
                       {item.message}
                     </p>
 
-                    {/* Quick Link Actions */}
-                    <div className="flex items-center gap-3 mt-3">
-                      {isDepartureNotif(item) && (
-                        <Link
-                          href={`/${locale}/mon-billet`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[12px] font-bold border border-emerald-200/60 transition-all"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">directions_bus</span>
-                          <span>Voir mon billet</span>
-                        </Link>
-                      )}
-                      {isBookingNotif(item) && (
-                        <Link
-                          href={`/${locale}/mon-billet`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-[12px] font-bold border border-blue-200/60 transition-all"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">confirmation_number</span>
-                          <span>Voir mon billet</span>
-                        </Link>
-                      )}
-                    </div>
+
                   </div>
 
                   {/* Delete button */}

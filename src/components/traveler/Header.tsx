@@ -55,11 +55,11 @@ export const Header = () => {
         console.warn('Storage read warning in header:', e);
       }
 
-      // Si non connecté, aucun badge de compte personnel
+      // Si non connecté, afficher immédiatement les billets et notifications locaux enregistrés
       if (!user) {
         if (isMounted) {
-          setUnreadNotifs(0);
-          setActiveTicketsCount(0);
+          setUnreadNotifs(localUnread);
+          setActiveTicketsCount(localActiveTickets);
         }
         return;
       }
@@ -89,12 +89,20 @@ export const Header = () => {
           }
         }
 
+        // Prendre en compte les éléments locaux et distants pour une réactivité instantanée
+        const combinedUnread = Math.max(unread, localUnread);
+        const combinedActive = Math.max(active, localActiveTickets);
+
         if (isMounted) {
-          setUnreadNotifs(unread);
-          setActiveTicketsCount(active);
+          setUnreadNotifs(combinedUnread);
+          setActiveTicketsCount(combinedActive);
         }
       } catch (err) {
         console.warn('Failed to load counts in header:', err);
+        if (isMounted) {
+          setUnreadNotifs(localUnread);
+          setActiveTicketsCount(localActiveTickets);
+        }
       }
     };
 
@@ -296,15 +304,6 @@ export const Header = () => {
                   <span className="material-symbols-outlined text-[18px]">person</span>
                   <span>Profil</span>
                 </Link>
-
-                <button
-                  onClick={() => signOut()}
-                  title="Se déconnecter"
-                  aria-label="Se déconnecter"
-                  className="hidden sm:flex w-10 h-10 items-center justify-center rounded-xl bg-surface-container hover:bg-rose-50 hover:text-rose-600 text-on-surface-variant border border-outline-variant/40 transition-all active:scale-90 duration-75 shrink-0"
-                >
-                  <span className="material-symbols-outlined text-[18px]">logout</span>
-                </button>
               </>
             ) : (
               <div className="hidden sm:flex items-center gap-2">

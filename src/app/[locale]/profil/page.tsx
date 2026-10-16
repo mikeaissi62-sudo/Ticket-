@@ -24,10 +24,30 @@ interface StatsData {
   unreadNotifs: number;
 }
 
+const AFRICAN_COUNTRIES = [
+  { code: 'BJ', name: 'Bénin', dialCode: '+229', flag: '🇧🇯', placeholder: '01 64 28 90 00' },
+  { code: 'TG', name: 'Togo', dialCode: '+228', flag: '🇹🇬', placeholder: '90 12 34 56' },
+  { code: 'NG', name: 'Nigéria', dialCode: '+234', flag: '🇳🇬', placeholder: '80 12 34 56 78' },
+  { code: 'CI', name: "Côte d'Ivoire", dialCode: '+225', flag: '🇨🇮', placeholder: '07 01 23 45 67' },
+  { code: 'NE', name: 'Niger', dialCode: '+227', flag: '🇳🇪', placeholder: '90 12 34 56' },
+  { code: 'BF', name: 'Burkina Faso', dialCode: '+226', flag: '🇧🇫', placeholder: '70 12 34 56' },
+  { code: 'GH', name: 'Ghana', dialCode: '+233', flag: '🇬🇭', placeholder: '24 123 4567' },
+  { code: 'SN', name: 'Sénégal', dialCode: '+221', flag: '🇸🇳', placeholder: '77 123 45 67' },
+  { code: 'ML', name: 'Mali', dialCode: '+223', flag: '🇲🇱', placeholder: '66 12 34 56' },
+  { code: 'GN', name: 'Guinée', dialCode: '+224', flag: '🇬🇳', placeholder: '62 123 4567' },
+  { code: 'CM', name: 'Cameroun', dialCode: '+237', flag: '🇨🇲', placeholder: '6 71 23 45 67' },
+  { code: 'GA', name: 'Gabon', dialCode: '+241', flag: '🇬🇦', placeholder: '06 12 34 56' },
+  { code: 'CG', name: 'Congo', dialCode: '+242', flag: '🇨🇬', placeholder: '06 123 4567' },
+  { code: 'CD', name: 'RDC', dialCode: '+243', flag: '🇨🇩', placeholder: '81 234 5678' },
+  { code: 'RW', name: 'Rwanda', dialCode: '+250', flag: '🇷🇼', placeholder: '78 123 4567' },
+  { code: 'TD', name: 'Tchad', dialCode: '+235', flag: '🇹🇩', placeholder: '66 12 34 56' },
+];
+
 type AuthMethod = 'phone' | 'email' | 'google';
 type PhoneStep = 'input' | 'verify';
 
 export default function ProfilPage() {
+  const [selectedCountry, setSelectedCountry] = useState(AFRICAN_COUNTRIES[0]);
   const locale = useLocale();
   const [supabase] = useState(() => createClient());
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +86,14 @@ export default function ProfilPage() {
     notifWhatsapp: true,
     notifEmail: false,
   });
+
+  const [userRole, setUserRole] = useState<string>('traveler');
+
+  // Password update form state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [stats, setStats] = useState<StatsData>({
     totalTrips: 0,
@@ -122,7 +150,14 @@ export default function ProfilPage() {
         });
 
         if (data.stats) {
-          setStats(data.stats);
+          setStats(prev => ({
+            ...prev,
+            totalTrips: data.stats.totalTrips ?? prev.totalTrips,
+            totalSpent: data.stats.totalSpent ?? prev.totalSpent,
+          }));
+        }
+        if (p.role) {
+          setUserRole(p.role);
         }
       }
     } catch (err) {
@@ -132,23 +167,106 @@ export default function ProfilPage() {
     }
   }, [supabase]);
 
+  // Synchronisation stricte du nombre de notifications avec Header & localStorage
+  const refreshNotificationCount = useCallback(async () => {
+    try {
+      let deletedIds = new Set<string>();
+      let localReadIds = new Set<string>();
+
+      const rawDeleted = localStorage.getItem('ticketplus_deleted_notification_ids');
+      if (rawDeleted) {
+        const arr = JSON.parse(rawDeleted);
+        if (Array.isArray(arr)) deletedIds = new Set(arr);
+      }
+
+      const rawNotifs = localStorage.getItem('ticketplus_notifications');
+      if (rawNotifs) {
+        const parsed = JSON.parse(rawNotifs);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((n: any) => {
+            if (n.is_read) localReadIds.add(n.id);
+          });
+        }
+      }
+
+      const res = await fetch('/api/notifications', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.notifications && Array.isArray(data.notifications)) {
+          const validNotifs = data.notifications.filter((n: any) => !deletedIds.has(n.id));
+          const unread = validNotifs.filter((n: any) => !n.is_read && !localReadIds.has(n.id)).length;
+          setStats(prev => ({ ...prev, unreadNotifs: unread }));
+        }
+      }
+    } catch (err) {
+      console.warn('Sync error in profil notifications:', err);
+    }
+  }, []);
+
   useEffect(() => {
     loadProfile();
+    refreshNotificationCount();
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         loadProfile();
+        refreshNotificationCount();
       } else {
         setUser(null);
         setIsLoading(false);
       }
     });
 
+    const handleSync = () => refreshNotificationCount();
+    window.addEventListener('ticketplus_update', handleSync);
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+
+    const channel = supabase
+      .channel('profile-notifs-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        refreshNotificationCount();
+      })
+      .subscribe();
+
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('ticketplus_update', handleSync);
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+      supabase.removeChannel(channel);
     };
-  }, [loadProfile, supabase]);
+  }, [loadProfile, refreshNotificationCount, supabase]);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordFeedback(null);
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordFeedback({ type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: 'error', text: 'Les deux mots de passe ne correspondent pas.' });
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setPasswordFeedback({ type: 'error', text: error.message });
+      } else {
+        setPasswordFeedback({ type: 'success', text: 'Votre mot de passe a été modifié avec succès.' });
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err: any) {
+      setPasswordFeedback({ type: 'error', text: err?.message || 'Erreur lors de la mise à jour.' });
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   // ===== PHONE OTP HANDLERS =====
   const handleSendOtp = async () => {
@@ -451,7 +569,7 @@ export default function ProfilPage() {
                 progress_activity
               </span>
               <h3 className="text-[16px] font-bold text-[#0F172A] mb-1">Chargement de votre profil...</h3>
-              <p className="text-[13px] text-[#64748B]">Connexion sécurisée à Supabase.</p>
+              <p className="text-[13px] text-[#64748B]">Connexion sécurisée à votre compte Ticket+.</p>
             </div>
           ) : !user ? (
             /* --- NOT LOGGED IN: AUTH VIEW --- */
@@ -815,9 +933,9 @@ export default function ProfilPage() {
                         Continuer avec Google
                       </button>
 
-                      <div className="p-3 rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[11px] text-[#64748B] text-center">
-                        <span className="material-symbols-outlined text-[14px] align-middle mr-1">info</span>
-                        Nécessite la configuration des identifiants Google Cloud dans le dashboard Supabase.
+                      <div className="p-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-[12px] text-[#065F46] text-center font-medium">
+                        <span className="material-symbols-outlined text-[15px] align-middle mr-1 text-[#10B981]">verified_user</span>
+                        Connexion 1-clic instantanée et sécurisée avec votre compte Google.
                       </div>
                     </div>
                   )}
@@ -831,7 +949,7 @@ export default function ProfilPage() {
 
                   {/* Demo account quick login */}
                   <div className="text-center">
-                    <p className="text-[12px] text-[#64748B] mb-2">Vous souhaitez juste tester l&apos;application ?</p>
+                    <p className="text-[12px] text-[#64748B] mb-2">Vous souhaitez tester l&apos;application sans mot de passe ?</p>
                     <button
                       type="button"
                       onClick={handleDemoLogin}
@@ -839,7 +957,7 @@ export default function ProfilPage() {
                       className="w-full py-2.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] text-[12px] font-bold hover:bg-[#E2E8F0] transition-colors flex items-center justify-center gap-2"
                     >
                       <span className="material-symbols-outlined text-[16px] text-[#10B981]">bolt</span>
-                      Connexion rapide Démo (Voyageur Bénin)
+                      Connexion Voyageur Démo
                     </button>
                   </div>
                 </div>
@@ -849,7 +967,7 @@ export default function ProfilPage() {
               <div className="mt-4 text-center">
                 <p className="text-[11px] text-[#94A3B8] flex items-center justify-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">lock</span>
-                  Connexion sécurisée via Supabase Auth — données chiffrées
+                  Connexion 100% sécurisée — vos données personnelles sont chiffrées et protégées
                 </p>
               </div>
             </div>
@@ -860,13 +978,6 @@ export default function ProfilPage() {
               <div className="lg:col-span-1 space-y-4">
                 <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
                   <div className="bg-[#0F172A] p-6 flex flex-col items-center text-center text-white relative">
-                    <button
-                      onClick={handleLogout}
-                      className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
-                      title="Se déconnecter"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">logout</span>
-                    </button>
                     <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-3 border-2 border-white/20 text-white">
                       <span className="material-symbols-outlined text-[36px]">person</span>
                     </div>
@@ -915,35 +1026,21 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                {/* Quick Shortcuts */}
-                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-sm space-y-2">
+                {/* Accès direct au Portail Admin si l'utilisateur est administrateur */}
+                {userRole === 'admin' && (
                   <Link
-                    href={`/${locale}/mon-billet`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFC] hover:bg-[#F1F5F9] transition-colors border border-[#E2E8F0]"
+                    href="/admin"
+                    className="flex items-center justify-between p-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white transition-all border border-slate-700 shadow-sm"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-[20px] text-[#10B981]">confirmation_number</span>
-                      <span className="text-[13px] font-bold text-[#0F172A]">Mes Billets &amp; Réservations</span>
+                      <span className="material-symbols-outlined text-[20px] text-emerald-400">admin_panel_settings</span>
+                      <span className="text-[13px] font-bold">Portail Administrateur</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] text-[11px] font-bold">
-                      {stats.totalTrips}
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-400/30">
+                      Accéder
                     </span>
                   </Link>
-                  <Link
-                    href={`/${locale}/notifications`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFC] hover:bg-[#F1F5F9] transition-colors border border-[#E2E8F0]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-[20px] text-[#F59E0B]">notifications</span>
-                      <span className="text-[13px] font-bold text-[#0F172A]">Notifications &amp; Alertes</span>
-                    </div>
-                    {stats.unreadNotifs > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-[#EF4444] text-white text-[11px] font-bold">
-                        {stats.unreadNotifs}
-                      </span>
-                    )}
-                  </Link>
-                </div>
+                )}
               </div>
 
               {/* Right Column: Edit Forms */}
@@ -951,7 +1048,7 @@ export default function ProfilPage() {
                 {savedSuccess && (
                   <div className="p-4 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] text-[13px] font-medium flex items-center gap-2">
                     <span className="material-symbols-outlined text-[20px] text-[#10B981]">check_circle</span>
-                    Vos modifications ont été synchronisées avec succès sur Supabase.
+                    Vos modifications ont été enregistrées avec succès.
                   </div>
                 )}
 
@@ -967,6 +1064,7 @@ export default function ProfilPage() {
                       <input
                         value={profile.firstName}
                         onChange={e => setProfile({ ...profile, firstName: e.target.value })}
+                        placeholder="Votre prénom"
                         className="w-full px-4 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none"
                       />
                     </div>
@@ -975,27 +1073,45 @@ export default function ProfilPage() {
                       <input
                         value={profile.lastName}
                         onChange={e => setProfile({ ...profile, lastName: e.target.value })}
+                        placeholder="Votre nom"
                         className="w-full px-4 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none"
                       />
                     </div>
-                    <div>
+
+                    {/* Case Téléphone Mobile avec sélecteur de pays d'Afrique sur une seule ligne */}
+                    <div className="sm:col-span-2">
                       <label className="text-[12px] font-semibold text-[#334155] block mb-1">Téléphone Mobile</label>
-                      <div className="flex">
-                        <span className="px-3 py-2.5 rounded-l-xl bg-[#E2E8F0] border border-r-0 border-[#CBD5E1] text-[12px] font-bold text-[#334155]">
-                          🇧🇯 +229
-                        </span>
+                      <div className="flex w-full">
+                        <select
+                          value={selectedCountry.code}
+                          onChange={e => {
+                            const found = AFRICAN_COUNTRIES.find(c => c.code === e.target.value);
+                            if (found) setSelectedCountry(found);
+                          }}
+                          className="px-3 py-2.5 rounded-l-xl bg-[#F1F5F9] border border-r-0 border-[#CBD5E1] text-[13px] font-bold text-[#1E293B] outline-none cursor-pointer hover:bg-[#E2E8F0] transition-colors shrink-0 max-w-[130px] sm:max-w-[160px]"
+                        >
+                          {AFRICAN_COUNTRIES.map(c => (
+                            <option key={c.code} value={c.code}>
+                              {c.flag} {c.dialCode} ({c.name})
+                            </option>
+                          ))}
+                        </select>
                         <input
+                          type="tel"
                           value={profile.phone}
                           onChange={e => setProfile({ ...profile, phone: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-r-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none"
+                          placeholder={selectedCountry.placeholder || "01 64 28 90 00"}
+                          className="w-full px-4 py-2.5 rounded-r-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none font-medium"
                         />
                       </div>
                     </div>
+
                     <div>
                       <label className="text-[12px] font-semibold text-[#334155] block mb-1">Email</label>
                       <input
                         value={profile.email}
                         onChange={e => setProfile({ ...profile, email: e.target.value })}
+                        placeholder="votre@email.com"
                         className="w-full px-4 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none"
                         type="email"
                       />
@@ -1010,18 +1126,6 @@ export default function ProfilPage() {
                         {['Cotonou', 'Parakou', 'Bohicon', 'Natitingou', 'Porto-Novo', 'Djougou', 'Abomey'].map(c => (
                           <option key={c} value={c}>{c}</option>
                         ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[12px] font-semibold text-[#334155] block mb-1">Pièce d&apos;identité</label>
-                      <select
-                        value={profile.idType}
-                        onChange={e => setProfile({ ...profile, idType: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none"
-                      >
-                        <option value="cni">CNI (Carte Nationale d&apos;Identité)</option>
-                        <option value="cip">CIP (Certificat d&apos;Identification Personnelle)</option>
-                        <option value="passport">Passeport</option>
                       </select>
                     </div>
                   </div>
@@ -1083,6 +1187,68 @@ export default function ProfilPage() {
                       Déconnexion
                     </button>
                   </div>
+                </form>
+
+                {/* Formulaire Modifier le mot de passe */}
+                <form onSubmit={handleUpdatePassword} className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-6">
+                  <h3 className="text-[16px] font-bold text-[#0F172A] mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px] text-[#10B981]">lock_reset</span>
+                    Modifier le mot de passe
+                  </h3>
+                  <p className="text-[12px] text-[#64748B] mb-4">
+                    Assurez-vous de choisir un mot de passe sécurisé d&apos;au moins 6 caractères.
+                  </p>
+
+                  {passwordFeedback && (
+                    <div className={`p-3 rounded-xl mb-4 text-[13px] font-medium flex items-center gap-2 ${
+                      passwordFeedback.type === 'success'
+                        ? 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46]'
+                        : 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B]'
+                    }`}>
+                      <span className="material-symbols-outlined text-[18px]">
+                        {passwordFeedback.type === 'success' ? 'check_circle' : 'error'}
+                      </span>
+                      {passwordFeedback.text}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="text-[12px] font-semibold text-[#334155] block mb-1">Nouveau mot de passe</label>
+                      <input
+                        type="password"
+                        required
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[12px] font-semibold text-[#334155] block mb-1">Confirmer le mot de passe</label>
+                      <input
+                        type="password"
+                        required
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-[13px] text-[#0F172A] focus:border-[#10B981] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={passwordSaving || !newPassword}
+                    className="px-6 py-2.5 rounded-xl bg-[#10B981] text-white text-[13px] font-bold hover:bg-[#059669] transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                  >
+                    {passwordSaving ? (
+                      <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-[16px]">key</span>
+                    )}
+                    Mettre à jour le mot de passe
+                  </button>
                 </form>
               </div>
             </div>

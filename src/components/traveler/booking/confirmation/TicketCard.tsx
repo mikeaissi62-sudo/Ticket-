@@ -22,6 +22,7 @@ export interface BookingData {
   phone?: string;
   company?: string;
   isFlexible?: boolean;
+  status?: 'confirmed' | 'completed' | 'cancelled';
 }
 
 const getStationName = (city: string = 'Cotonou', company: string = '') => {
@@ -81,19 +82,21 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
 
   const [qrSvg, setQrSvg] = useState<string>('');
 
+  const isCancelled = data.status === 'cancelled';
+
   useEffect(() => {
-    // Génération du QR Code vectoriel SVG scannable
-    const qrData = `TICKET+_BENIN|REF:${bookingRef}|${fromCity}->${toCity}|PASSENGER:${passengerName}|SEAT:${data.seat || '14'}|STATUS:CONFIRMED`;
+    // Génération du QR Code vectoriel SVG scannable avec montant payé et horaires complets
+    const qrData = `TICKET+_BENIN|REF:${bookingRef}|${fromCity}->${toCity}|PASSENGER:${passengerName}|SEAT:${data.seat || '14'}|MONTANT:${formattedPrice} FCFA|DEPART:${departureTime}|ARRIVEE:${arrivalTime}|STATUS:${isCancelled ? 'CANCELLED' : 'CONFIRMED'}`;
     QRCode.toString(qrData, { 
       type: 'svg', 
       margin: 0, 
-      color: { dark: '#0F172A', light: '#FFFFFF' } 
+      color: { dark: isCancelled ? '#991B1B' : '#0F172A', light: '#FFFFFF' } 
     }, (err, svg) => {
       if (!err && svg) {
         setQrSvg(svg);
       }
     });
-  }, [bookingRef, fromCity, toCity, passengerName, data.seat]);
+  }, [bookingRef, fromCity, toCity, passengerName, data.seat, formattedPrice, departureTime, arrivalTime, isCancelled]);
 
   const handleBookIdentical = () => {
     const dateStr = data.date || new Date().toISOString().split('T')[0];
@@ -127,15 +130,30 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
             </div>
           </div>
 
-          {/* Badge Confirmé */}
+          {/* Badge Statut */}
           <div className="flex-shrink-0">
-            <span className="inline-flex items-center px-3.5 py-1 rounded-full text-[12px] sm:text-[13px] font-semibold bg-[#06392D] text-[#34D399] border border-[#10B981]/30 shadow-sm">
-              Confirmé
-            </span>
+            {isCancelled ? (
+              <span className="inline-flex items-center gap-1 px-3.5 py-1 rounded-full text-[12px] sm:text-[13px] font-black bg-rose-950 text-rose-300 border border-rose-500/50 shadow-sm animate-pulse">
+                <span className="material-symbols-outlined text-[15px]">cancel</span>
+                ANNULÉ
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-3.5 py-1 rounded-full text-[12px] sm:text-[13px] font-semibold bg-[#06392D] text-[#34D399] border border-[#10B981]/30 shadow-sm">
+                Confirmé
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Ligne 2 : DÉPART — TRAJET — ARRIVÉE */}
+        {/* Bannière d'avertissement si annulé */}
+        {isCancelled && (
+          <div className="mt-4 p-2.5 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-200 text-[12px] font-bold flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-rose-400">warning</span>
+            <span>NOTE : CE BILLET A ÉTÉ ANNULÉ (NON VALIDE)</span>
+          </div>
+        )}
+
+        {/* Ligne 2 : DÉPART — TRAJET — ARRIVÉE AVEC HEURES BIEN VISIBLES */}
         <div className="grid grid-cols-12 items-center mt-7 pt-1 gap-2">
           
           {/* Bloc Départ (Gauche) */}
@@ -143,11 +161,14 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
             <span className="text-[#94A3B8] text-[11px] font-bold uppercase tracking-wider block">
               DÉPART
             </span>
-            <div className="text-white font-extrabold text-[22px] sm:text-[25px] tracking-tight mt-0.5 truncate leading-tight">
+            <div className="text-white font-extrabold text-[20px] sm:text-[23px] tracking-tight mt-0.5 truncate leading-tight">
               {fromCity}
             </div>
-            <div className="text-[#94A3B8] text-[12px] sm:text-[13px] font-normal mt-1 truncate">
-              {departureStation} • {departureTime}
+            <div className="text-[#00D084] font-black text-[17px] sm:text-[19px] tracking-tight mt-1">
+              {departureTime}
+            </div>
+            <div className="text-[#94A3B8] text-[11px] sm:text-[12px] font-normal truncate mt-0.5" title={departureStation}>
+              {departureStation}
             </div>
           </div>
 
@@ -170,11 +191,14 @@ export const TicketCard = ({ data }: { data: BookingData }) => {
             <span className="text-[#94A3B8] text-[11px] font-bold uppercase tracking-wider block">
               ARRIVÉE
             </span>
-            <div className="text-white font-extrabold text-[22px] sm:text-[25px] tracking-tight mt-0.5 truncate leading-tight">
+            <div className="text-white font-extrabold text-[20px] sm:text-[23px] tracking-tight mt-0.5 truncate leading-tight">
               {toCity}
             </div>
-            <div className="text-[#94A3B8] text-[12px] sm:text-[13px] font-normal mt-1 truncate">
-              {arrivalStation} • {arrivalTime}
+            <div className="text-[#00D084] font-black text-[17px] sm:text-[19px] tracking-tight mt-1">
+              {arrivalTime}
+            </div>
+            <div className="text-[#94A3B8] text-[11px] sm:text-[12px] font-normal truncate mt-0.5" title={arrivalStation}>
+              {arrivalStation}
             </div>
           </div>
 

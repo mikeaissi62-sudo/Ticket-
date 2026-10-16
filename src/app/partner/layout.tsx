@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import '../globals.css';
 import { AuthProvider, RoleGuard } from '@/lib/auth';
 import { PartnerSidebar } from '@/components/partner/PartnerSidebar';
 

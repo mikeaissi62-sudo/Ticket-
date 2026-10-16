@@ -200,8 +200,9 @@ export default function ResultsPage() {
                 <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
                 <span className="font-label-sm text-label-sm font-semibold">{trips.length} Départ{trips.length > 1 ? 's' : ''} Direct{trips.length > 1 ? 's' : ''} Garanti{trips.length > 1 ? 's' : ''}</span>
                 {isLiveSupabase && (
-                  <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                    Supabase Live
+                  <span className="ml-1 text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    Temps Réel
                   </span>
                 )}
               </div>

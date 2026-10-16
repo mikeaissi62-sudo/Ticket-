@@ -124,6 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     setRole('traveler');
     if (typeof window !== 'undefined') {
+      // Nettoyer toutes les données locales de session pour remettre les badges à 0
+      try {
+        localStorage.removeItem('ticketplus_guest_bookings');
+        localStorage.removeItem('ticketplus_notifications');
+        localStorage.removeItem('ticketplus_deleted_notification_ids');
+        localStorage.removeItem('ticketplus_deleted_booking_refs');
+      } catch {}
+      window.dispatchEvent(new Event('ticketplus_update'));
       // Redirection vers la page de présentation à la déconnexion
       window.location.href = `/${locale}`;
     }

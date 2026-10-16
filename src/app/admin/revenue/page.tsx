@@ -1,15 +1,80 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
+import { createClient } from '@/lib/supabase/client';
+
+interface CompanyRevenue {
+  company: string;
+  volume: number;
+  commissionRate: number;
+  commissionAmount: number;
+  netCompany: number;
+  status: string;
+}
 
 export default function AdminRevenuePage() {
-  const companyRevenues = [
-    { company: 'Confort Lines', volume: 1850000, commissionRate: 10, commissionAmount: 185000, netCompany: 1665000, status: 'À reverser' },
-    { company: 'Baobab Express', volume: 820000, commissionRate: 10, commissionAmount: 82000, netCompany: 738000, status: 'À reverser' },
-    { company: 'STM Voyageurs', volume: 460000, commissionRate: 10, commissionAmount: 46000, netCompany: 414000, status: 'Réglé' },
-    { company: 'ATT Transports', volume: 320000, commissionRate: 10, commissionAmount: 32000, netCompany: 288000, status: 'Réglé' },
-  ];
+  const [companyRevenues, setCompanyRevenues] = useState<CompanyRevenue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadRevenueData() {
+      try {
+        const supabase = createClient();
+        const { data: companies } = await supabase
+          .from('companies')
+          .select('id, name, commission_rate')
+          .order('name');
+
+        const { data: bookings } = await supabase
+          .from('bookings')
+          .select(`
+            total_price,
+            status,
+            trip:trips (
+              route:routes (
+                company_id
+              )
+            )
+          `)
+          .neq('status', 'cancelled');
+
+        const defaultCompanies = companies && companies.length > 0 
+          ? companies 
+          : [
+              { id: '1', name: 'Confort Lines', commission_rate: 10 },
+              { id: '2', name: 'Baobab Express', commission_rate: 10 },
+              { id: '3', name: 'STM Voyageurs', commission_rate: 10 },
+              { id: '4', name: 'ATT Transports', commission_rate: 10 },
+            ];
+
+        const aggregated: CompanyRevenue[] = defaultCompanies.map((comp: any) => {
+          const compBookings = (bookings || []).filter((b: any) => b.trip?.route?.company_id === comp.id);
+          const volume = compBookings.reduce((sum: number, b: any) => sum + (Number(b.total_price) || 0), 0);
+          const rate = comp.commission_rate || 10;
+          const comm = Math.round(volume * (rate / 100));
+          const net = volume - comm;
+
+          return {
+            company: comp.name,
+            volume,
+            commissionRate: rate,
+            commissionAmount: comm,
+            netCompany: net,
+            status: volume > 0 ? 'À reverser' : 'Aucun flux',
+          };
+        });
+
+        setCompanyRevenues(aggregated);
+      } catch (err) {
+        console.error('Erreur chargement revenus:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadRevenueData();
+  }, []);
 
   const totalGMV = companyRevenues.reduce((acc, c) => acc + c.volume, 0);
   const totalCommission = companyRevenues.reduce((acc, c) => acc + c.commissionAmount, 0);

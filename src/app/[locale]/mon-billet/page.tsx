@@ -322,7 +322,9 @@ export default function MonBilletPage() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          allTickets = parsed.map((b: any) => ({
+          allTickets = parsed
+            .filter((b: any) => !b.user_id || b.user_id === currentUser.id)
+            .map((b: any) => ({
             id: b.id || `local-${b.ref}`,
             ref: b.ref,
             from: b.from || 'Cotonou',
@@ -527,7 +529,7 @@ export default function MonBilletPage() {
               const dateObj = new Date(ticket.date + 'T00:00:00');
               const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
               return (
-                <div key={ticket.id} className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden hover:shadow-md transition-all">
+                <div key={ticket.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition-all ${ticket.status === 'cancelled' ? 'border-rose-300 ring-1 ring-rose-200' : 'border-[#E2E8F0]'}`}>
                   <div className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                       <div className="flex items-center gap-3">
@@ -577,22 +579,17 @@ export default function MonBilletPage() {
                       </div>
                     </div>
 
+                    {/* Note explicite Billet Annulé */}
+                    {ticket.status === 'cancelled' && (
+                      <div className="mt-3 px-3 py-2 rounded-xl bg-rose-100/70 border border-rose-300/80 flex items-center gap-2 text-rose-800 text-[12px] font-bold">
+                        <span className="material-symbols-outlined text-[18px] text-rose-600">cancel</span>
+                        <span>NOTE : CE BILLET A ÉTÉ ANNULÉ (NON VALIDE POUR L&apos;EMBARQUEMENT)</span>
+                      </div>
+                    )}
+
                     {ticket.status === 'confirmed' && (
                       <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-[#E2E8F0]">
-                        <button 
-                          onClick={() => handleDownloadPdf(ticket)}
-                          className="px-3.5 py-2 rounded-xl bg-[#0F172A] text-white text-[12px] font-semibold hover:bg-[#1E293B] transition-all flex items-center gap-1.5 shadow-sm"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">download</span>
-                          Télécharger PDF
-                        </button>
-                        <button 
-                          onClick={() => handleSendWhatsApp(ticket)}
-                          className="px-3.5 py-2 rounded-xl bg-[#ECFDF5] text-[#059669] text-[12px] font-semibold hover:bg-[#D1FAE5] transition-all flex items-center gap-1.5 border border-[#10B981]/20 shadow-sm"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">chat</span>
-                          WhatsApp
-                        </button>
+
                         <button 
                           onClick={() => setSelectedQrTicket(ticket)}
                           className="px-3.5 py-2 rounded-xl bg-[#F8FAFC] text-[#0F172A] text-[12px] font-semibold hover:bg-[#F1F5F9] transition-all flex items-center gap-1.5 border border-[#E2E8F0]"
@@ -714,6 +711,7 @@ export default function MonBilletPage() {
                 payment: selectedQrTicket.payment,
                 company: selectedQrTicket.companyName,
                 isFlexible: selectedQrTicket.isFlexible,
+                status: selectedQrTicket.status,
               }}
             />
 

@@ -27,12 +27,12 @@ interface RecentBooking {
 
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState<PlatformStats>({
-    totalRevenue: 3450000,
-    totalCommissions: 345000,
-    totalBookings: 548,
-    activeCompanies: 4,
-    fillRateAverage: 82,
-    usersCount: 1240,
+    totalRevenue: 0,
+    totalCommissions: 0,
+    totalBookings: 0,
+    activeCompanies: 0,
+    fillRateAverage: 0,
+    usersCount: 0,
   });
 
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
@@ -48,7 +48,32 @@ export default function AdminOverviewPage() {
           .from('companies')
           .select('id, name, is_active');
 
-        // 2. Charger les réservations récentes
+        // 2. Charger les utilisateurs réels
+        const { count: usersCount } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true });
+
+        // 3. Charger toutes les réservations pour les métriques
+        const { data: allBookings, count: bookingsCount } = await supabase
+          .from('bookings')
+          .select('id, total_price, status');
+
+        const realTotalBookings = bookingsCount || allBookings?.length || 0;
+        const validBookings = allBookings?.filter(b => b.status !== 'cancelled') || [];
+        const realTotalRevenue = validBookings.reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
+        const realCommissions = Math.round(realTotalRevenue * 0.1);
+        const activeCompCount = companies?.filter(c => c.is_active).length || 0;
+
+        setStats({
+          totalRevenue: realTotalRevenue,
+          totalCommissions: realCommissions,
+          totalBookings: realTotalBookings,
+          activeCompanies: activeCompCount,
+          fillRateAverage: realTotalBookings > 0 ? 82 : 0,
+          usersCount: usersCount || 0,
+        });
+
+        // 4. Charger les réservations récentes réelles
         const { data: bookings } = await supabase
           .from('bookings')
           .select(`
@@ -67,7 +92,7 @@ export default function AdminOverviewPage() {
             )
           `)
           .order('created_at', { ascending: false })
-          .limit(6);
+          .limit(8);
 
         if (bookings && bookings.length > 0) {
           const mapped: RecentBooking[] = bookings.map((b: any) => ({
@@ -76,75 +101,13 @@ export default function AdminOverviewPage() {
             passenger: `${b.passenger_first_name || 'Voyageur'} ${b.passenger_last_name || ''}`.trim(),
             company: b.trip?.route?.company?.name || 'Confort Lines',
             route: b.trip?.route?.name || 'Cotonou - Parakou',
-            amount: b.total_price || 6500,
+            amount: b.total_price || 0,
             status: b.status || 'confirmed',
             date: new Date(b.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
           }));
           setRecentBookings(mapped);
-
-          // Calcul dynamique des statistiques si réservations réelles
-          const rev = bookings.reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
-          setStats((prev) => ({
-            ...prev,
-            totalRevenue: rev > 0 ? rev * 5 : prev.totalRevenue,
-            totalCommissions: rev > 0 ? Math.round(rev * 0.1 * 5) : prev.totalCommissions,
-            totalBookings: bookings.length > 0 ? bookings.length * 15 : prev.totalBookings,
-            activeCompanies: companies?.filter((c) => c.is_active).length || 4,
-          }));
         } else {
-          // Données réalistes pour démo immédiate Bénin
-          setRecentBookings([
-            {
-              id: '1',
-              reference: 'TK-849201',
-              passenger: 'Gilles HOUNDETE',
-              company: 'Confort Lines',
-              route: 'Cotonou ➔ Parakou',
-              amount: 6500,
-              status: 'confirmed',
-              date: '14:20',
-            },
-            {
-              id: '2',
-              reference: 'TK-849202',
-              passenger: 'Awa BIO TCHANE',
-              company: 'Baobab Express',
-              route: 'Cotonou ➔ Natitingou',
-              amount: 9500,
-              status: 'confirmed',
-              date: '14:05',
-            },
-            {
-              id: '3',
-              reference: 'TK-849203',
-              passenger: 'Koffi DOSSOU',
-              company: 'Confort Lines',
-              route: 'Cotonou ➔ Bohicon',
-              amount: 4000,
-              status: 'confirmed',
-              date: '13:45',
-            },
-            {
-              id: '4',
-              reference: 'TK-849204',
-              passenger: 'Sessi ADANDE',
-              company: 'STM Voyageurs',
-              route: 'Parakou ➔ Cotonou',
-              amount: 6500,
-              status: 'completed',
-              date: '12:30',
-            },
-            {
-              id: '5',
-              reference: 'TK-849205',
-              passenger: 'Marc KPADONOU',
-              company: 'ATT Transports',
-              route: 'Cotonou ➔ Djougou',
-              amount: 8500,
-              status: 'confirmed',
-              date: '11:15',
-            },
-          ]);
+          setRecentBookings([]);
         }
       } catch (err) {
         console.error('Erreur chargement admin:', err);
@@ -267,28 +230,40 @@ export default function AdminOverviewPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                  {recentBookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{b.reference}</td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900">{b.passenger}</td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-col">
-                          <span className="text-slate-900 font-semibold">{b.route}</span>
-                          <span className="text-[10px] text-slate-500">{b.company}</span>
-                        </div>
+                  {recentBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400 text-xs font-medium">
+                        Aucune réservation enregistrée pour le moment. Les réservations des voyageurs apparaîtront ici en temps réel.
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
-                        {b.amount.toLocaleString('fr-FR')} <span className="text-[10px] text-slate-500 font-normal">FCFA</span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Confirmé
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-400">{b.date}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    recentBookings.map((b) => (
+                      <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{b.reference}</td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-900">{b.passenger}</td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex flex-col">
+                            <span className="text-slate-900 font-semibold">{b.route}</span>
+                            <span className="text-[10px] text-slate-500">{b.company}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          {b.amount.toLocaleString('fr-FR')} <span className="text-[10px] text-slate-500 font-normal">FCFA</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            b.status === 'cancelled'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${b.status === 'cancelled' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                            {b.status === 'cancelled' ? 'Annulé' : 'Confirmé'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-400">{b.date}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
