@@ -579,13 +579,6 @@ export default function MonBilletPage() {
                       </div>
                     </div>
 
-                    {/* Note explicite Billet Annulé */}
-                    {ticket.status === 'cancelled' && (
-                      <div className="mt-3 px-3 py-2 rounded-xl bg-rose-100/70 border border-rose-300/80 flex items-center gap-2 text-rose-800 text-[12px] font-bold">
-                        <span className="material-symbols-outlined text-[18px] text-rose-600">cancel</span>
-                        <span>NOTE : CE BILLET A ÉTÉ ANNULÉ (NON VALIDE POUR L&apos;EMBARQUEMENT)</span>
-                      </div>
-                    )}
 
                     {ticket.status === 'confirmed' && (
                       <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-[#E2E8F0]">

@@ -33,6 +33,17 @@ export default function PartnerLoginPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    if (errorParam === 'unauthorized_partner') {
+      setAuthError("Aucun compte compagnie n'est associé à cette adresse Google. Veuillez d'abord créer votre compte transporteur ci-dessous ou utiliser vos identifiants officiels.");
+    } else if (errorParam === 'not_a_partner') {
+      setAuthError("Ce compte n'a pas les droits d'accès transporteur. Veuillez contacter le support ou vous connecter sur l'espace voyageur.");
+    }
+  }, []);
+
   // ===== CONNEXION PAR EMAIL =====
   const handlePartnerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,6 +167,9 @@ export default function PartnerLoginPage() {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/api/auth/callback?next=/partner`,
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
       });
 

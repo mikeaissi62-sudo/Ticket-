@@ -19,62 +19,44 @@ export const PaymentSection = ({
         
         <div 
           onClick={() => setPaymentMethod('mtn')}
-          className={`payment-card p-space-sm rounded-xl cursor-pointer transition-all flex flex-col justify-between ${
+          className={`payment-card p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between ${
             paymentMethod === 'mtn' 
-              ? 'bg-surface-container-low' 
+              ? 'bg-surface-container-low ring-1 ring-secondary' 
               : 'bg-surface-container-lowest hover:bg-surface-container-low shadow-sm'
           }`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className={`font-label-sm text-label-sm font-bold px-2 py-0.5 rounded-full ${paymentMethod === 'mtn' ? 'bg-secondary-container text-on-secondary-container' : 'text-outline'}`}>
-              {paymentMethod === 'mtn' ? 'Direct' : 'Bénin'}
-            </span>
-            <span className={`material-symbols-outlined text-[18px] payment-check transition-opacity ${paymentMethod === 'mtn' ? 'text-secondary' : 'opacity-0 text-outline-variant'}`}>
-              check_circle
-            </span>
-          </div>
           <div className="font-body-md text-body-md font-bold text-on-surface">MTN MoMo</div>
-          <span className="font-label-sm text-label-sm text-on-surface-variant">Paiement instantané USSD</span>
+          <span className={`material-symbols-outlined text-[20px] payment-check transition-opacity ${paymentMethod === 'mtn' ? 'text-secondary' : 'opacity-20 text-outline-variant'}`}>
+            check_circle
+          </span>
         </div>
 
         <div 
           onClick={() => setPaymentMethod('moov')}
-          className={`payment-card p-space-sm rounded-xl cursor-pointer transition-all flex flex-col justify-between ${
+          className={`payment-card p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between ${
             paymentMethod === 'moov' 
-              ? 'bg-surface-container-low' 
+              ? 'bg-surface-container-low ring-1 ring-secondary' 
               : 'bg-surface-container-lowest hover:bg-surface-container-low shadow-sm'
           }`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className={`font-label-sm text-label-sm font-bold px-2 py-0.5 rounded-full ${paymentMethod === 'moov' ? 'bg-secondary-container text-on-secondary-container' : 'text-outline'}`}>
-              {paymentMethod === 'moov' ? 'Direct' : 'Bénin'}
-            </span>
-            <span className={`material-symbols-outlined text-[18px] payment-check transition-opacity ${paymentMethod === 'moov' ? 'text-secondary' : 'opacity-0 text-outline-variant'}`}>
-              check_circle
-            </span>
-          </div>
-          <div className="font-body-md text-body-md font-semibold text-on-surface">Moov Money</div>
-          <span className="font-label-sm text-label-sm text-on-surface-variant">Code de validation OTP</span>
+          <div className="font-body-md text-body-md font-bold text-on-surface">Moov Money</div>
+          <span className={`material-symbols-outlined text-[20px] payment-check transition-opacity ${paymentMethod === 'moov' ? 'text-secondary' : 'opacity-20 text-outline-variant'}`}>
+            check_circle
+          </span>
         </div>
 
         <div 
           onClick={() => setPaymentMethod('card')}
-          className={`payment-card p-space-sm rounded-xl cursor-pointer transition-all flex flex-col justify-between ${
+          className={`payment-card p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between ${
             paymentMethod === 'card' 
-              ? 'bg-surface-container-low' 
+              ? 'bg-surface-container-low ring-1 ring-secondary' 
               : 'bg-surface-container-lowest hover:bg-surface-container-low shadow-sm'
           }`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className={`font-label-sm text-label-sm font-bold px-2 py-0.5 rounded-full ${paymentMethod === 'card' ? 'bg-secondary-container text-on-secondary-container' : 'text-outline'}`}>
-              {paymentMethod === 'card' ? 'Direct' : 'International'}
-            </span>
-            <span className={`material-symbols-outlined text-[18px] payment-check transition-opacity ${paymentMethod === 'card' ? 'text-secondary' : 'opacity-0 text-outline-variant'}`}>
-              check_circle
-            </span>
-          </div>
-          <div className="font-body-md text-body-md font-semibold text-on-surface">Carte Visa / MC</div>
-          <span className="font-label-sm text-label-sm text-on-surface-variant">Paiement 3D-Secure</span>
+          <div className="font-body-md text-body-md font-bold text-on-surface">Carte Visa / MC</div>
+          <span className={`material-symbols-outlined text-[20px] payment-check transition-opacity ${paymentMethod === 'card' ? 'text-secondary' : 'opacity-20 text-outline-variant'}`}>
+            check_circle
+          </span>
         </div>
         
       </div>

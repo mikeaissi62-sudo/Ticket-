@@ -187,6 +187,7 @@ export default function LoginPage() {
         body: JSON.stringify({ 
           phone: fullPhone,
           dialCode: selectedCountry.dialCode,
+          mode: authMode,
         }),
       });
 
@@ -229,6 +230,7 @@ export default function LoginPage() {
           phone: fullPhone, 
           otp: otpCode,
           dialCode: selectedCountry.dialCode,
+          mode: authMode,
         }),
       });
 
@@ -375,10 +377,17 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectParam = searchParams.get('redirect');
+      const targetNext = redirectParam ? redirectParam : `/${locale}/accueil`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback?next=/${locale}`,
+          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(targetNext)}`,
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
       });
 

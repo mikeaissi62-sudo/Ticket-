@@ -62,18 +62,18 @@ export const PassengerForm = ({
                 const found = AFRICAN_COUNTRIES.find(c => c.code === e.target.value);
                 if (found) setSelectedCountry(found);
               }}
-              className="bg-surface-container px-2.5 py-2.5 rounded-l-xl font-label-md text-label-md font-semibold text-on-surface flex items-center border-r border-outline-variant/30 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+              className="w-24 sm:w-28 shrink-0 bg-surface-container px-2 py-2.5 rounded-l-xl font-label-md text-label-md font-bold text-on-surface flex items-center border-r border-outline-variant/30 outline-none cursor-pointer hover:bg-slate-200 transition-colors text-xs"
               title="Choisir le pays"
               aria-label="Indicatif pays"
             >
               {AFRICAN_COUNTRIES.map(c => (
                 <option key={c.code} value={c.code}>
-                  {c.flag} {c.dialCode} ({c.name})
+                  {c.flag} {c.dialCode}
                 </option>
               ))}
             </select>
             <input 
-              className="w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-r-xl px-3 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none" 
+              className="flex-1 w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-r-xl px-3.5 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none" 
               id="phone" 
               placeholder={selectedCountry.placeholder} 
               type="tel" 
@@ -81,7 +81,6 @@ export const PassengerForm = ({
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>
-          <span className="font-label-sm text-label-sm text-secondary block">Billet électronique instantané et alertes de départ envoyés ici</span>
         </div>
         <div className="space-y-1">
           <label className="block font-label-md text-label-md font-semibold text-on-surface" htmlFor="email">Adresse e-mail <span className="text-on-surface-variant font-normal">(Facultatif)</span></label>
@@ -96,7 +95,6 @@ export const PassengerForm = ({
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <span className="font-label-sm text-label-sm text-outline block">Pour recevoir votre reçu fiscal et facture PDF</span>
         </div>
       </div>
     </div>

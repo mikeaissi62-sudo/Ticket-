@@ -100,7 +100,16 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Nouvel utilisateur — créer le compte
+      // Si mode de connexion et compte introuvable -> interdire formellement la connexion
+      const mode = body.mode || 'login';
+      if (mode !== 'register') {
+        return NextResponse.json(
+          { error: "Aucun compte n'a été trouvé avec ce numéro de téléphone. Veuillez d'abord créer un compte (Inscription)." },
+          { status: 404 }
+        );
+      }
+
+      // Mode inscription uniquement : Nouvel utilisateur — créer le compte
       const syntheticEmail = `${phone.replace('+', '')}@phone.ticketplus.bj`;
       const tempPassword = `PhoneOTP_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
@@ -196,7 +205,16 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (!existingProfile) {
-          // Créer le profil voyageur
+          const mode = body.mode || 'login';
+          if (mode !== 'register') {
+            await admin.auth.admin.deleteUser(data.user.id);
+            return NextResponse.json(
+              { error: "Aucun compte n'a été trouvé avec ce numéro. Veuillez d'abord vous inscrire." },
+              { status: 404 }
+            );
+          }
+
+          // Créer le profil voyageur (inscription)
           await (admin.from('users') as any).upsert({
             id: data.user.id,
             email: data.user.email || '',

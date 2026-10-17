@@ -50,13 +50,20 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (!existingProfile) {
-        // Premier login OAuth
+        // Si tentative de connexion sur le portail partenaire sans compte créé au préalable
+        if (next.startsWith('/partner')) {
+          await supabase.auth.signOut();
+          return NextResponse.redirect(
+            new URL('/partner/login?error=unauthorized_partner', requestUrl.origin)
+          );
+        }
+
+        // Pour les voyageurs : création automatique du profil Google
         const metadata = data.user.user_metadata || {};
         const fullName = metadata.full_name || metadata.name || '';
-        const nameParts = fullName.split(' ');
+        const nameParts = fullName.trim().split(' ');
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
-        const role = next.startsWith('/partner') ? 'partner' : 'traveler';
 
         await (admin.from('users') as any).upsert({
           id: data.user.id,
@@ -64,7 +71,7 @@ export async function GET(request: NextRequest) {
           phone: metadata.phone || '',
           first_name: firstName,
           last_name: lastName,
-          role: role,
+          role: 'traveler',
           preferences: {
             city: 'Cotonou',
             idType: 'cni',
@@ -72,7 +79,7 @@ export async function GET(request: NextRequest) {
             notifWhatsapp: true,
             notifEmail: true,
             auth_method: 'google',
-            avatar_url: metadata.avatar_url || '',
+            avatar_url: metadata.avatar_url || metadata.picture || '',
           },
           updated_at: new Date().toISOString(),
         });
@@ -81,10 +88,16 @@ export async function GET(request: NextRequest) {
         await (admin.from('notifications') as any).insert({
           user_id: data.user.id,
           title: 'Bienvenue sur Ticket+ !',
-          message: `Bonjour ${firstName} ! Votre compte Google est connecté. Réservez vos trajets en bus au Bénin en toute simplicité.`,
+          message: `Bonjour ${firstName || 'cher voyageur'} ! Votre compte Google est connecté. Réservez vos trajets en bus au Bénin en toute simplicité.`,
           type: 'system',
           is_read: false,
         });
+      } else if (next.startsWith('/partner') && existingProfile.role !== 'partner' && existingProfile.role !== 'admin') {
+        // Le compte existe mais n'est pas un partenaire
+        await supabase.auth.signOut();
+        return NextResponse.redirect(
+          new URL('/partner/login?error=not_a_partner', requestUrl.origin)
+        );
       }
     }
 

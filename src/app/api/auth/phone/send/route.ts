@@ -53,6 +53,41 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient();
+    const mode = body.mode || 'login'; // 'login' | 'register' | 'profile'
+
+    // Vérifier l'existence du compte dans la base de données
+    const cleanDigits = phone.replace(/\D/g, '');
+    const localPhone = phone.replace(/^\+\d{1,4}/, '');
+
+    // Recherche dans la table users par numéro international ou national
+    const { data: matchedProfiles } = await (admin.from('users') as any)
+      .select('id, phone, email, role')
+      .or(`phone.eq.${phone},phone.eq.${localPhone}`)
+      .limit(1);
+
+    const userExists = matchedProfiles && matchedProfiles.length > 0;
+
+    // Si tentative de connexion sans compte créé au préalable -> bloquer immédiatement
+    if (mode === 'login' && !userExists) {
+      return NextResponse.json(
+        { 
+          error: "Aucun compte n'est associé à ce numéro de téléphone. Veuillez d'abord créer un compte (Inscription).",
+          not_found: true 
+        },
+        { status: 404 }
+      );
+    }
+
+    // Si inscription et compte existe déjà -> inviter à se connecter
+    if (mode === 'register' && userExists) {
+      return NextResponse.json(
+        { 
+          error: "Ce numéro de téléphone est déjà associé à un compte existant. Veuillez vous connecter.",
+          already_exists: true 
+        },
+        { status: 409 }
+      );
+    }
 
     // Vérifier si un SMS provider est configuré dans Supabase
     // On tente d'abord la méthode native Supabase OTP

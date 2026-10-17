@@ -609,19 +609,18 @@ export default function BookingPage() {
                         const found = AFRICAN_COUNTRIES.find(c => c.code === e.target.value);
                         if (found) setSelectedCountry(found);
                       }}
-                      className="bg-surface-container px-2.5 py-2.5 rounded-l-xl font-label-md text-label-md font-semibold text-on-surface flex items-center border-r border-outline-variant/30 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+                      className="w-24 sm:w-28 shrink-0 bg-surface-container px-2 py-2.5 rounded-l-xl font-label-md text-label-md font-bold text-on-surface flex items-center border-r border-outline-variant/30 outline-none cursor-pointer hover:bg-slate-200 transition-colors text-xs"
                       title="Choisir le pays"
                       aria-label="Indicatif pays"
                     >
                       {AFRICAN_COUNTRIES.map(c => (
                         <option key={c.code} value={c.code}>
-                          {c.flag} {c.dialCode} ({c.name})
+                          {c.flag} {c.dialCode}
                         </option>
                       ))}
                     </select>
-                    <input className="w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-r-xl px-3 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none border border-transparent focus:border-outline-variant" id="phone" placeholder={selectedCountry.placeholder} type="tel" defaultValue="01 64 28 90" />
+                    <input className="flex-1 w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-r-xl px-3.5 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none border border-transparent focus:border-outline-variant" id="phone" placeholder={selectedCountry.placeholder} type="tel" defaultValue="01 64 28 90" />
                   </div>
-                  <span className="font-label-sm text-label-sm text-secondary block mt-1">Billet électronique instantané et alertes de départ envoyés ici</span>
                 </div>
                 <div className="space-y-1">
                   <label className="block font-label-md text-label-md font-semibold text-on-surface" htmlFor="email">Adresse e-mail <span className="text-on-surface-variant font-normal">(Facultatif)</span></label>
@@ -629,7 +628,6 @@ export default function BookingPage() {
                     <span className="material-symbols-outlined absolute left-3.5 top-3 text-[18px] text-on-surface-variant">mail</span>
                     <input className="w-full bg-surface-container-low focus:bg-surface-container-lowest rounded-xl pl-10 pr-4 py-2.5 font-body-md text-body-md text-on-surface transition-all outline-none border border-transparent focus:border-outline-variant" id="email" placeholder="voyageur@example.bj" type="email" defaultValue="koffi.dossou@gmail.com" />
                   </div>
-                  <span className="font-label-sm text-label-sm text-outline block mt-1">Pour recevoir votre reçu fiscal et facture PDF</span>
                 </div>
               </div>
             </div>
@@ -711,41 +709,29 @@ export default function BookingPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm" id="payment-selector">
                 <div 
                   onClick={() => setPaymentMethod("mtn")}
-                  className={`payment-card p-space-sm rounded-xl cursor-pointer transition-all flex flex-col justify-between ${paymentMethod === 'mtn' ? 'bg-surface-container-low ring-1 ring-secondary' : 'bg-surface-container-lowest shadow-sm hover:bg-surface-container-low'}`} 
+                  className={`payment-card p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'mtn' ? 'bg-surface-container-low ring-1 ring-secondary' : 'bg-surface-container-lowest shadow-sm hover:bg-surface-container-low'}`} 
                   data-payment="mtn"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-label-sm text-label-sm font-bold bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full">Direct</span>
-                    <span className={`material-symbols-outlined text-[18px] transition-opacity ${paymentMethod === 'mtn' ? 'text-secondary' : 'text-outline-variant opacity-0'}`}>check_circle</span>
-                  </div>
                   <div className="font-body-md text-body-md font-bold text-on-surface">MTN MoMo</div>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Paiement instantané USSD</span>
+                  <span className={`material-symbols-outlined text-[20px] transition-opacity ${paymentMethod === 'mtn' ? 'text-secondary' : 'text-outline-variant opacity-20'}`}>check_circle</span>
                 </div>
                 
                 <div 
                   onClick={() => setPaymentMethod("moov")}
-                  className={`payment-card p-space-sm rounded-xl cursor-pointer transition-all flex flex-col justify-between ${paymentMethod === 'moov' ? 'bg-surface-container-low ring-1 ring-secondary' : 'bg-surface-container-lowest shadow-sm hover:bg-surface-container-low'}`} 
+                  className={`payment-card p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'moov' ? 'bg-surface-container-low ring-1 ring-secondary' : 'bg-surface-container-lowest shadow-sm hover:bg-surface-container-low'}`} 
                   data-payment="moov"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-label-sm text-label-sm text-outline">Bénin</span>
-                    <span className={`material-symbols-outlined text-[18px] transition-opacity ${paymentMethod === 'moov' ? 'text-secondary' : 'text-outline-variant opacity-0'}`}>check_circle</span>
-                  </div>
-                  <div className="font-body-md text-body-md font-semibold text-on-surface">Moov Money</div>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Code de validation OTP</span>
+                  <div className="font-body-md text-body-md font-bold text-on-surface">Moov Money</div>
+                  <span className={`material-symbols-outlined text-[20px] transition-opacity ${paymentMethod === 'moov' ? 'text-secondary' : 'text-outline-variant opacity-20'}`}>check_circle</span>
                 </div>
                 
                 <div 
                   onClick={() => setPaymentMethod("card")}
-                  className={`payment-card p-space-sm rounded-xl cursor-pointer transition-all flex flex-col justify-between ${paymentMethod === 'card' ? 'bg-surface-container-low ring-1 ring-secondary' : 'bg-surface-container-lowest shadow-sm hover:bg-surface-container-low'}`} 
+                  className={`payment-card p-3.5 rounded-xl cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'card' ? 'bg-surface-container-low ring-1 ring-secondary' : 'bg-surface-container-lowest shadow-sm hover:bg-surface-container-low'}`} 
                   data-payment="card"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-label-sm text-label-sm text-outline">International</span>
-                    <span className={`material-symbols-outlined text-[18px] transition-opacity ${paymentMethod === 'card' ? 'text-secondary' : 'text-outline-variant opacity-0'}`}>check_circle</span>
-                  </div>
-                  <div className="font-body-md text-body-md font-semibold text-on-surface">Carte Visa / MC</div>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">Paiement 3D-Secure</span>
+                  <div className="font-body-md text-body-md font-bold text-on-surface">Carte Visa / MC</div>
+                  <span className={`material-symbols-outlined text-[20px] transition-opacity ${paymentMethod === 'card' ? 'text-secondary' : 'text-outline-variant opacity-20'}`}>check_circle</span>
                 </div>
               </div>
             </div>

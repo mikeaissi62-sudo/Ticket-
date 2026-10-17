@@ -55,11 +55,11 @@ export const Header = () => {
         console.warn('Storage read warning in header:', e);
       }
 
-      // Si non connecté, afficher immédiatement les billets et notifications locaux enregistrés
+      // Si non connecté, masquer immédiatement tous les badges
       if (!user) {
         if (isMounted) {
-          setUnreadNotifs(localUnread);
-          setActiveTicketsCount(localActiveTickets);
+          setUnreadNotifs(0);
+          setActiveTicketsCount(0);
         }
         return;
       }
@@ -260,7 +260,7 @@ export const Header = () => {
             >
               <span className="material-symbols-outlined text-[18px]">confirmation_number</span>
               <span>Mon Billet</span>
-              {activeTicketsCount > 0 && (
+              {user && activeTicketsCount > 0 && (
                 <span className="ml-1 px-2 py-0.5 rounded-full bg-[#00D084] text-[#0B1324] text-[11px] font-black shadow-sm border border-white/20 animate-scale-in">
                   {activeTicketsCount}
                 </span>
@@ -280,7 +280,7 @@ export const Header = () => {
               }`}
             >
               <span className="material-symbols-outlined text-[20px]">notifications</span>
-              {unreadNotifs > 0 && (
+              {user && unreadNotifs > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#10B981] text-white text-[10px] font-extrabold flex items-center justify-center shadow-sm border-2 border-white animate-scale-in">
                   {unreadNotifs > 9 ? '9+' : unreadNotifs}
                 </span>
@@ -429,7 +429,7 @@ export const Header = () => {
                   <span className="material-symbols-outlined text-[20px]">notifications</span>
                   <span>Notifications</span>
                 </div>
-                {unreadNotifs > 0 && (
+                {user && unreadNotifs > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-[#10B981] text-white text-[11px] font-bold">
                     {unreadNotifs}
                   </span>
