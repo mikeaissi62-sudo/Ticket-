@@ -85,6 +85,26 @@ export default function BookingConfirmationPage() {
         }).catch(() => {});
       }
 
+      // 3. Répertorier chaque billet acheté dans Supabase pour le portail admin
+      fetch('/api/bookings/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_reference: bookingRef,
+          from,
+          to,
+          company_name: company,
+          date: dateParam,
+          seat,
+          price: rawPrice > 0 ? rawPrice : 7500,
+          name,
+          phone,
+          payment_method: payment,
+        }),
+      }).catch((err) => {
+        console.warn('Booking record API sync warning:', err);
+      });
+
       // Notifier le Header pour actualiser immédiatement les compteurs
       window.dispatchEvent(new Event('ticketplus_update'));
     } catch (e) {

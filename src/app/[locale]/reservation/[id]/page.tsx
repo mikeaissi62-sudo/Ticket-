@@ -245,34 +245,31 @@ export default function BookingPage() {
     let bookingId: string = '';
     let bookingRef: string = `TK-BEN-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // Try to create booking via Supabase API if real trip
-    if (!tripId.startsWith('sched-') && seats.length > 0) {
-      try {
-        const seatObj = seats.find(s => s.seat_number === parseInt(selectedSeat, 10));
-        if (seatObj) {
-          const res = await fetch('/api/bookings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              trip_id: tripId,
-              seat_id: seatObj.id,
-              passenger_first_name: firstName,
-              passenger_last_name: lastName,
-              passenger_phone: phone,
-              has_baggage: extraLuggage,
-              is_flexible: true,
-              total_price: totalPrice,
-            }),
-          });
-          const data = await res.json();
-          if (res.ok && data.booking) {
-            bookingId = data.booking.id;
-            bookingRef = data.booking.booking_reference || bookingRef;
-          }
-        }
-      } catch (err) {
-        console.error('Booking submission error:', err);
+    // Enregistrer et répertorier le billet dans Supabase pour le portail admin
+    try {
+      const recRes = await fetch('/api/bookings/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_reference: bookingRef,
+          from,
+          to,
+          company_name: companyName,
+          date: dateParam,
+          seat: selectedSeat,
+          price: totalPrice,
+          name: fullName,
+          phone: fullPhone,
+          payment_method: paymentMethod,
+        }),
+      });
+      const recData = await recRes.json();
+      if (recData?.booking) {
+        bookingId = recData.booking.id;
+        bookingRef = recData.booking.booking_reference || bookingRef;
       }
+    } catch (err) {
+      console.warn('Erreur enregistrement réservation Supabase:', err);
     }
 
     const confirmParams = new URLSearchParams({

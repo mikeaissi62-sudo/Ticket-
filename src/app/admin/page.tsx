@@ -10,7 +10,7 @@ interface PlatformStats {
   totalCommissions: number;
   totalBookings: number;
   activeCompanies: number;
-  fillRateAverage: number;
+  averageBasket: number;
   usersCount: number;
 }
 
@@ -31,7 +31,7 @@ export default function AdminOverviewPage() {
     totalCommissions: 0,
     totalBookings: 0,
     activeCompanies: 0,
-    fillRateAverage: 0,
+    averageBasket: 0,
     usersCount: 0,
   });
 
@@ -63,13 +63,14 @@ export default function AdminOverviewPage() {
         const realTotalRevenue = validBookings.reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
         const realCommissions = Math.round(realTotalRevenue * 0.1);
         const activeCompCount = companies?.filter(c => c.is_active).length || 0;
+        const realAverageBasket = realTotalBookings > 0 ? Math.round(realTotalRevenue / realTotalBookings) : 0;
 
         setStats({
           totalRevenue: realTotalRevenue,
           totalCommissions: realCommissions,
           totalBookings: realTotalBookings,
           activeCompanies: activeCompCount,
-          fillRateAverage: realTotalBookings > 0 ? 82 : 0,
+          averageBasket: realAverageBasket,
           usersCount: usersCount || 0,
         });
 
@@ -141,8 +142,8 @@ export default function AdminOverviewPage() {
               {stats.totalRevenue.toLocaleString('fr-FR')} <span className="text-xs font-bold text-slate-400">FCFA</span>
             </div>
             <div className="mt-2.5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-              <span className="material-symbols-outlined text-[16px]">trending_up</span>
-              <span>+18.4% ce mois</span>
+              <span className="material-symbols-outlined text-[16px]">verified</span>
+              <span>Montants réels encaissés</span>
             </div>
           </div>
 
@@ -175,8 +176,8 @@ export default function AdminOverviewPage() {
               {stats.totalBookings.toLocaleString('fr-FR')}
             </div>
             <div className="mt-2.5 flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
-              <span className="material-symbols-outlined text-[16px]">speed</span>
-              <span>Taux remplissage moy. : <strong>{stats.fillRateAverage}%</strong></span>
+              <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
+              <span>Panier moyen : <strong>{stats.averageBasket.toLocaleString('fr-FR')} FCFA</strong></span>
             </div>
           </div>
 
@@ -327,7 +328,7 @@ export default function AdminOverviewPage() {
               </p>
               <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
                 <span>Disponibilité passerelles</span>
-                <span className="text-emerald-400 font-bold">MTN / Moov 99.8%</span>
+                <span className="text-emerald-400 font-bold">MTN &amp; Moov Opérationnels</span>
               </div>
             </div>
           </div>
